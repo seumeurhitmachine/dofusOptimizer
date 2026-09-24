@@ -1,0 +1,97 @@
+{
+  "//": "Settings universels — hooks agnostiques de stack. Les hooks stack-spécifiques sont ajoutés par le bootstrap depuis docs/agent/archis/<archi>.md §Hooks Claude Code.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "rm -f .claude/.methodo-loaded; echo '📖 Début de session — lire avant toute action : .claude/methodo-ref.md, docs/agent/project-context.md (dont §Configuration verrouillée : versions infra, auth Zitadel, secrets Infisical), docs/agent/working-style.md, et la section État courant de docs/agent/project-state.md.'"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f .claude/methodo-ref.md ] && [ ! -f .claude/.methodo-loaded ]; then echo '📖 Méthodologie Claude : lire .claude/methodo-ref.md ET docs/agent/project-context.md avant toute action si ce n est pas déjà fait dans la session.'; fi"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "//": "Plafond specs : 150 lignes par fichier",
+        "matcher": "Write(docs/specs/*.md)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "lines=$(wc -l < \"$CLAUDE_FILE_PATHS\"); if [ $lines -gt 150 ]; then echo \"⚠ $CLAUDE_FILE_PATHS : $lines lignes / max 150 (spec par domaine).\"; fi"
+          }
+        ]
+      },
+      {
+        "//": "Plafond ui-design : 200 lignes",
+        "matcher": "Write(docs/ui-design.md)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "lines=$(wc -l < \"$CLAUDE_FILE_PATHS\"); if [ $lines -gt 200 ]; then echo \"⚠ docs/ui-design.md : $lines lignes / max 200.\"; fi"
+          }
+        ]
+      },
+      {
+        "//": "Plafond générique docs/*.md : 400 lignes",
+        "matcher": "Write(docs/*.md)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "lines=$(wc -l < \"$CLAUDE_FILE_PATHS\"); if [ $lines -gt 400 ]; then echo \"⚠ $CLAUDE_FILE_PATHS : $lines lignes / max 400.\"; fi"
+          }
+        ]
+      },
+      {
+        "//": "Plafond claude.md (Axe en cours) : 80 lignes",
+        "matcher": "Write(claude.md)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "lines=$(wc -l < \"$CLAUDE_FILE_PATHS\"); if [ $lines -gt 80 ]; then echo \"⚠ claude.md : $lines lignes / max 80 — synthétiser tasks, pas acceptance.\"; fi"
+          }
+        ]
+      },
+      {
+        "//": "Plafond project-context.md : 150 lignes",
+        "matcher": "Write(docs/agent/project-context.md)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "lines=$(wc -l < \"$CLAUDE_FILE_PATHS\"); if [ $lines -gt 150 ]; then echo \"⚠ docs/agent/project-context.md : $lines lignes / max 150.\"; fi"
+          }
+        ]
+      },
+      {
+        "//": "project-context.md : placeholders non remplis (Configuration verrouillée)",
+        "matcher": "Write(docs/agent/project-context.md)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if grep -qE 'YYYY-MM-DD|^\\| *\\| *\\|$' \"$CLAUDE_FILE_PATHS\"; then echo \"⚠ docs/agent/project-context.md : placeholders non remplis (date ou cellules vides) — compléter §Configuration verrouillée avant validation.\"; fi"
+          }
+        ]
+      },
+      {
+        "//": "Plafond working-style.md : 20 lignes",
+        "matcher": "Write(docs/agent/working-style.md)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "lines=$(wc -l < \"$CLAUDE_FILE_PATHS\"); if [ $lines -gt 20 ]; then echo \"⚠ docs/agent/working-style.md : $lines lignes / max 20.\"; fi"
+          }
+        ]
+      }
+    ]
+  }
+}

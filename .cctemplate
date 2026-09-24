@@ -1,0 +1,11 @@
+CCTEMPLATE_VERSION=0.3.2
+INSTALLED_AT=2026-09-24T07:22:29Z
+IA_TARGET=claude,codex
+ARCHI_ALIAS=
+ARCHI_FILE=
+SOURCE_VERSION_FILE=cctemplate/VERSION
+COMMON_PATH=cctemplate/common
+CLAUDE_AGENT_PATH=cctemplate/agents/claude
+CODEX_AGENT_PATH=cctemplate/agents/codex
+MANAGED_PATHS=.claude .codex AGENTS.md docs/agent/archis docs/init
+NOTES=v0.3.2 durcit les scripts bootstrap/update (preflight des dependances, trap ERR remontant l etape fautive, normalisation des chemins Windows, fallback d identite git)

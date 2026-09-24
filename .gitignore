@@ -1,0 +1,110 @@
+# =============================================================================
+# .gitignore
+# =============================================================================
+
+# Environnement
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+*.secret
+
+# Dépendances
+node_modules/
+.pnp
+.pnp.js
+vendor/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+packages/*/node_modules/
+
+# Build & artefacts
+dist/
+build/
+out/
+.next/
+.nuxt/
+.svelte-kit/
+*.egg-info/
+*.egg
+target/
+bin/
+obj/
+
+# Cache & outils
+.cache/
+.parcel-cache/
+.turbo/
+.eslintcache
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.idea/
+.vscode/
+*.suo
+*.user
+*.userprefs
+*.swp
+*.swo
+*~
+
+# Tests & coverage
+coverage/
+.nyc_output/
+*.lcov
+htmlcov/
+.pytest_cache/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Docker local uniquement
+docker-compose.override.yml
+
+# PV de recette (documents de travail temporaires)
+docs/recette-*.md
+
+# Sessions et logs IA locaux
+.claude/sessions/
+.claude/logs/
+.codex/sessions/
+.codex/logs/
+*.claude-session
+*.codex-session
+
+# Divers
+*.bak
+*.tmp
+*.temp
+*.orig
+.terraform/
+*.tfstate
+*.tfstate.backup
+
+# =============================================================================
+# Ce qui est versionné (mémo)
+# =============================================================================
+# docs/agent/project-context.md    ✓ contexte technique stable commun
+# docs/agent/working-style.md      ✓ comportement agent commun
+# docs/agent/project-state.md      ✓ état et historique du projet
+# docs/agent/archis/               ✓ archi active du projet
+# AGENTS.md                     ✓ instructions natives Codex
+# docs/specs/                   ✓ specs initiales (archives après Axes initiaux)
+# docs/data-model.md            ✓ modèle de données actif
+# docs/algos/                   ✓ documentation des algos
+# docs/plan-axes.md             ✓ feuille de route
+# docs/ui-design.md             ✓ référence UI
+# axes/                         ✓ archives claude.md terminés
+# claude.md                     ✓ Axe en cours
+# =============================================================================

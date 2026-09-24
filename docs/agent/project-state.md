@@ -4,25 +4,27 @@
 
 > Mettre à jour à chaque /finalise. Max 30 lignes.
 
-**Dernier Axe complété :** Axe 3 — Détection des fenêtres & comptes — 2026-09-24
-**Phase :** Axes initiaux en cours (Axe 3 livré, Axe 4 à démarrer)
+**Dernier Axe complété :** Axe 4 — Ordre & exclusion (onglet Comptes) — 2026-09-24
+**Phase :** Axes initiaux en cours (Axe 4 livré, Axe 5 à démarrer)
 
 **Fonctionnalités actives :**
 - (aucune US — socle infra) Solution `.slnx` + `src/App` (WPF) + `tests/App.Tests` (xUnit).
-- Socle MVVM manuel (`ObservableObject`, `RelayCommand`), composition root `App.xaml.cs`
-  (`ShutdownMode.OnExplicitShutdown`). Fenêtre à onglets (Comptes câblé, Raccourcis/Réglages vides),
-  thème sombre (`Themes/Colors.xaml` + `Controls.xaml`).
+- Socle MVVM manuel (`ObservableObject`, `RelayCommand`), composition root `App.xaml.cs`.
+  Fenêtre à onglets (Comptes câblé, Raccourcis/Réglages vides), thème sombre (`Themes/`).
 - Publication vérifiée : `App.exe` single-file self-contained win-x64 démarre sans runtime.
 - **Persistance (US-P01/P02/P03)** : modèle `Binding`/`AccountConfig`/`AppConfig` (schemaVersion 1),
   `JsonConfigStore` (source-gen `AppJsonContext`, écriture atomique, corruption→backup+défaut,
   migration montante). Autosave débouncé (`ConfigAutosaveService`). Config chargée au démarrage
   et injectée au `MainViewModel`. Invariant d'unicité globale porté par `AppConfig.HasBindingConflicts()`.
 - **Détection (US-D01/D02)** : `IWindowDetector`/`WindowDetector` — `EnumWindows` initial +
-  `SetWinEventHook` (CREATE/DESTROY/NAMECHANGE), événementiel sans polling. Reconnaissance via
-  titre/classe `user32` seuls (`DofusWindowRecognizer`, extraction nom = fonction pure). Fusion
-  détectés/persistés par clé `characterName` (`AccountMerge`, pure), absents conservés. Onglet
-  Comptes temps réel (`AccountsViewModel` + `AccountItemViewModel` + `AccountsView`, lecture seule).
-  `NativeMethods` étendu (P/Invoke détection). Détecteur démarré après `window.Show()`, libéré `OnExit`.
+  `SetWinEventHook` (CREATE/DESTROY/NAMECHANGE), événementiel sans polling. Reconnaissance du client
+  **Unity** (`DofusWindowRecognizer`) : classe `UnityWndClass` + titre `Nom - Classe - Version - Type`
+  (avant-dernier segment = version), nom = 1er segment ; extraction pure. Fusion détectés/persistés
+  par clé `characterName` (`AccountMerge`, pure), absents conservés. Journal debug opt-in (`DetectionLog`,
+  var `DOFUS_SWITCHER_DEBUG`). Détecteur démarré après `window.Show()`, libéré `OnExit`.
+- **Ordre & exclusion (US-D03/D04)** : `AccountsViewModel` — commandes ↑/↓ + glisser-déposer (poignée
+  `☰`, code-behind DnD) + exclusion/réintégration ; toute action matérialise l'ordre visible dans
+  `AppConfig.Accounts` (ordre liste = rotation) et déclenche l'autosave via `MainViewModel.ConfigChanged`.
 
 **Contraintes techniques actives :**
 - .NET 10 + WPF, MVVM manuel, **zéro NuGet** dans l'app, publish single-file self-contained.
@@ -53,7 +55,18 @@
   `App.csproj` seul (les tests restent sans `unsafe`).
 - [DT-009] Vue runtime (`DetectedWindow`, `AccountRuntimeState`) séparée de la config persistée ;
   fusion pure `AccountMerge` = foyer testable. Comptes détectés non persistés affichés au runtime
-  uniquement (aucune écriture config à cet Axe — gestion à l'Axe 4).
+  uniquement (aucune écriture config avant l'Axe 4).
+- [DT-010] Critère de reconnaissance **structurel** (client Unity) : classe `UnityWndClass` + titre à
+  ≥ 4 segments dont l'avant-dernier est une version `X.Y…`, nom = 1er segment. Préféré à une liste de
+  classes de personnage (fragile : locale FR/EN, ajouts). Format réel confirmé en recette (H-01 validé).
+- [DT-011] Journal de détection opt-in (`DetectionLog`, var d'env `DOFUS_SWITCHER_DEBUG`) : diagnostic
+  local par fichier, zéro dépendance, coût nul désactivé. A servi à découvrir le vrai format de titre.
+- [DT-012] `ShutdownMode.OnLastWindowClose` **intérimaire** : tant que le tray n'existe pas (Axe 7),
+  fermer la fenêtre doit quitter le process (sinon fantôme + `OnExit` jamais exécuté). L'Axe 7
+  rétablira `OnExplicitShutdown` + « fermer = masquer dans le tray ».
+- [DT-013] Toute action ordre/exclusion **matérialise l'ordre visible complet** dans `AppConfig.Accounts`
+  (ordre affiché = ordre persisté), matérialisant les comptes seulement détectés ; `DirectBinding`
+  préservé par clé. La détection seule ne persiste jamais.
 
 **Fichiers critiques — ne pas modifier sans discussion :**
 - `src/App/Interop/NativeMethods.cs` (contraintes C-02/C-03).
@@ -65,6 +78,32 @@
 ## Historique des Axes
 
 <!-- Une entrée par Axe complété. Ajoutée par /finalise. -->
+
+### Axe 4 — Ordre & exclusion (onglet Comptes) (2026-09-24)
+
+**Périmètre livré :** réordonnancement des comptes (commandes ↑/↓ sur la sélection + glisser-déposer
+via la poignée `☰`) et exclusion/réintégration, avec persistance de l'ordre et du flag `excluded`
+(`AccountsViewModel.AccountsChanged` → `MainViewModel` → autosave). Couvre US-D03, US-D04, RG-D04.
+Correctif majeur du critère de détection (Axe 3) découvert en recette + fermeture propre du process.
+
+**Changements structurants :** `AccountsViewModel` porte désormais l'ordre persisté mutable + les
+commandes ; `MainViewModel.OnAccountsChanged` matérialise l'ordre visible dans `AppConfig.Accounts`
+(ordre = rotation, source unique). Reconnaissance DOFUS réécrite pour le client **Unity** réel
+(`UnityWndClass` + `Nom - Classe - Version - Type`) — l'ancien motif `" - Dofus"` était erroné.
+Ajout d'un journal de diagnostic opt-in (`Diagnostics/DetectionLog`). `ShutdownMode` repassé à
+`OnLastWindowClose` en intérim (le tray Axe 7 rétablira l'explicite).
+
+**Décisions :** [DT-010] critère structurel Unity ; [DT-011] journal debug opt-in ; [DT-012]
+`ShutdownMode` intérimaire ; [DT-013] matérialisation de l'ordre visible à l'action.
+
+**Vérifications :** `dotnet build` 0 erreur / 0 warning ; `dotnet test` 49/49 (move + bornes, exclusion,
+persistance ordre/flag, matérialisation à la 1re action, préservation runtime, DnD, recognizer format
+Unity). Recette manuelle : 3 clients détectés/affichés « connecté », réordonnancement + exclusion OK,
+croix ferme le process (aucun fantôme). `dotnet publish -r win-x64` single-file OK.
+
+**Dette technique assumée :** onglets Raccourcis (Axe 5) / Réglages (Axe 7) encore vides ; fermeture =
+quitter (comportement provisoire jusqu'au tray Axe 7). DnD réordonne mais pas d'indicateur visuel
+d'insertion (amélioration UX possible ultérieurement).
 
 ### Axe 3 — Détection des fenêtres & comptes (2026-09-24)
 

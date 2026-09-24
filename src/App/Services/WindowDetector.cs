@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Windows.Threading;
+using DofusSwitcher.Diagnostics;
 using DofusSwitcher.Interop;
 using DofusSwitcher.Models;
 
@@ -44,8 +45,12 @@ public sealed unsafe class WindowDetector : IWindowDetector
         _dispatcher = Dispatcher.CurrentDispatcher;
         s_current = this;
 
+        DetectionLog.Write("=== Start : énumération initiale ===");
+
         // Énumération initiale : synchrone sur ce thread (UI) → capte les clients déjà ouverts.
         NativeMethods.EnumWindows(&EnumWindowProc, 0);
+
+        DetectionLog.Write($"=== Énumération terminée : {_known.Count} client(s) DOFUS reconnu(s) ===");
 
         // Suivi temps réel. Deux plages distinctes plutôt qu'une plage large [CREATE..NAMECHANGE] :
         // évite le bruit des événements intermédiaires (SHOW, HIDE, FOCUS, REORDER…).
@@ -83,12 +88,19 @@ public sealed unsafe class WindowDetector : IWindowDetector
         try
         {
             var detector = s_current;
-            if (detector is not null && NativeMethods.IsWindowVisible(hwnd))
+            if (detector is null) return 1;
+
+            var visible = NativeMethods.IsWindowVisible(hwnd);
+            if (DetectionLog.IsEnabled)
+                DetectionLog.Write($"enum hwnd=0x{hwnd:X} visible={(visible ? 1 : 0)} class='{GetClassName(hwnd)}' title='{GetWindowTitle(hwnd)}'");
+
+            if (visible)
                 detector.EvaluateWindow(hwnd); // synchrone sur le thread UI (appel depuis Start)
         }
-        catch
+        catch (Exception ex)
         {
-            // [WARN] Ne jamais laisser une exception franchir la frontière native.
+            // [WARN] Ne jamais laisser une exception franchir la frontière native (journalisée si debug).
+            DetectionLog.Write($"enum EXCEPTION: {ex}");
         }
         return 1; // continuer l'énumération
     }
@@ -108,9 +120,10 @@ public sealed unsafe class WindowDetector : IWindowDetector
             var detector = s_current;
             detector?._dispatcher?.InvokeAsync(() => detector.OnWinEvent(eventType, hwnd));
         }
-        catch
+        catch (Exception ex)
         {
-            // [WARN] Ne jamais laisser une exception franchir la frontière native.
+            // [WARN] Ne jamais laisser une exception franchir la frontière native (journalisée si debug).
+            DetectionLog.Write($"winevent EXCEPTION: {ex}");
         }
     }
 
@@ -151,6 +164,9 @@ public sealed unsafe class WindowDetector : IWindowDetector
         var name = DofusWindowRecognizer.IsDofusWindow(title, className)
             ? DofusWindowRecognizer.ExtractCharacterName(title)
             : null;
+
+        if (DetectionLog.IsEnabled)
+            DetectionLog.Write($"eval  hwnd=0x{hwnd:X} class='{className}' title='{title}' → {(name is null ? "REJETÉ" : $"DOFUS «{name}»")}");
 
         var wasKnown = _known.TryGetValue(hwnd, out var previousName);
 

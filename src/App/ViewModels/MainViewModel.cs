@@ -16,6 +16,8 @@ public sealed class MainViewModel : ObservableObject
     {
         Config = config;
         Accounts = new AccountsViewModel(config.Accounts, detector);
+        // Réordonnancement/exclusion (Axe 4) → maj de la config → autosave débouncé (ref [DT-006]).
+        Accounts.AccountsChanged += OnAccountsChanged;
     }
 
     /// <summary>Titre affiché dans la barre de la fenêtre.</summary>
@@ -29,15 +31,17 @@ public sealed class MainViewModel : ObservableObject
 
     /// <summary>
     /// Émis après toute modification de <see cref="Config"/> ; porte l'instantané à persister.
-    /// [DECISION] Aucun émetteur à l'Axe 2 (pas encore d'écran d'édition) : câblage posé pour que
-    /// les Axes 4/5/7 déclenchent l'autosave sans retoucher la composition root.
+    /// Relayé à l'autosave débouncé par la composition root.
     /// </summary>
     public event Action<AppConfig>? ConfigChanged;
 
-    /// <summary>Remplace la configuration courante et notifie l'autosave. Réservé aux Axes d'édition.</summary>
-    private void UpdateConfig(AppConfig config)
+    /// <summary>
+    /// Intègre le nouvel ordre/état d'exclusion des comptes dans la config et déclenche l'autosave.
+    /// L'ordre de la liste <b>est</b> l'ordre de rotation (source unique — data-model §AppConfig).
+    /// </summary>
+    private void OnAccountsChanged(IReadOnlyList<AccountConfig> accounts)
     {
-        Config = config;
-        ConfigChanged?.Invoke(config);
+        Config = Config with { Accounts = [.. accounts] };
+        ConfigChanged?.Invoke(Config);
     }
 }

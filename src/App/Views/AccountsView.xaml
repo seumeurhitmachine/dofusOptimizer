@@ -7,14 +7,45 @@
              Background="{StaticResource BackgroundBrush}">
 
     <!--
-        Onglet Comptes (ui-design.md §Composants). Lecture seule à l'Axe 3 : liste temps réel avec
-        état ; réordonnancement / exclusion arrivent à l'Axe 4.
+        Onglet Comptes (ui-design.md §Composants/§Interactions). Liste temps réel avec état +
+        réordonnancement (↑/↓ et glisser-déposer via la poignée ☰) + exclusion/réintégration.
         [ARCH] Aucune valeur HEX ici : uniquement des brushes de Colors.xaml. L'état n'est jamais
-        porté par la seule couleur (pastille + libellé texte) — WCAG (ui-design §Contraintes).
+        porté par la seule couleur (pastille + libellé) — WCAG (ui-design §Contraintes).
     -->
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+
+        <!-- Bouton de toolbar : sobre, thème sombre. -->
+        <Style x:Key="ToolbarButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root"
+                                Background="{StaticResource SurfaceBrush}"
+                                BorderBrush="{StaticResource SurfaceAltBrush}"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{StaticResource SurfaceAltBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+                                <Setter TargetName="Root" Property="Opacity" Value="0.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
         <!-- Ligne de compte : fond surface, survol surfaceAlt, coins arrondis. -->
         <Style x:Key="AccountRowStyle" TargetType="ListBoxItem">
@@ -47,10 +78,21 @@
     </UserControl.Resources>
 
     <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
         <!-- Liste des comptes (courte : nombre de clients, pas de pagination). -->
-        <ListBox ItemsSource="{Binding Items}"
+        <ListBox x:Name="AccountsList"
+                 Grid.Row="0"
+                 ItemsSource="{Binding Items}"
+                 SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
                  Background="Transparent"
                  BorderThickness="0"
+                 AllowDrop="True"
+                 Drop="AccountsList_Drop"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                  ItemContainerStyle="{StaticResource AccountRowStyle}"
                  Visibility="{Binding HasItems, Converter={StaticResource BoolToVisibility}}">
@@ -58,20 +100,32 @@
                 <DataTemplate>
                     <Grid>
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
-                        <!-- Nom de personnage. -->
+                        <!-- Poignée de glisser-déposer (ui-design §Interactions). -->
                         <TextBlock Grid.Column="0"
+                                   Text="&#9776;"
+                                   Margin="0,0,10,0"
+                                   VerticalAlignment="Center"
+                                   Cursor="SizeAll"
+                                   ToolTip="Glisser pour réordonner"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   PreviewMouseLeftButtonDown="Handle_PreviewMouseLeftButtonDown"
+                                   PreviewMouseMove="Handle_PreviewMouseMove" />
+
+                        <!-- Nom de personnage. -->
+                        <TextBlock Grid.Column="1"
                                    Text="{Binding CharacterName}"
                                    VerticalAlignment="Center"
                                    Foreground="{StaticResource TextPrimaryBrush}"
                                    FontSize="13" />
 
                         <!-- Badge « exclu » (warning), visible seulement si le compte est exclu. -->
-                        <Border Grid.Column="1"
+                        <Border Grid.Column="2"
                                 Margin="8,0"
                                 Padding="5,1"
                                 VerticalAlignment="Center"
@@ -85,17 +139,17 @@
                         </Border>
 
                         <!-- État : pastille + libellé (jamais la couleur seule). -->
-                        <TextBlock Grid.Column="2"
+                        <TextBlock Grid.Column="3"
                                    x:Name="StateText"
                                    VerticalAlignment="Center"
                                    FontSize="11"
-                                   Text="○ absent"
+                                   Text="&#9675; absent"
                                    Foreground="{StaticResource TextSecondaryBrush}" />
                     </Grid>
 
                     <DataTemplate.Triggers>
                         <DataTrigger Binding="{Binding IsConnected}" Value="True">
-                            <Setter TargetName="StateText" Property="Text" Value="● connecté" />
+                            <Setter TargetName="StateText" Property="Text" Value="&#9679; connecté" />
                             <Setter TargetName="StateText" Property="Foreground" Value="{StaticResource SuccessBrush}" />
                         </DataTrigger>
                     </DataTemplate.Triggers>
@@ -104,12 +158,28 @@
         </ListBox>
 
         <!-- État vide : aucun compte persisté ni détecté. -->
-        <TextBlock Text="Aucun client DOFUS détecté. Ouvrez un client : il apparaîtra ici automatiquement."
+        <TextBlock Grid.Row="0"
+                   Text="Aucun client DOFUS détecté. Ouvrez un client : il apparaîtra ici automatiquement."
                    TextWrapping="Wrap"
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center"
                    Foreground="{StaticResource TextSecondaryBrush}"
                    FontSize="12"
                    Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
+
+        <!-- Toolbar : réordonnancement + exclusion, sur le compte sélectionné. -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,10,0,0">
+            <Button Content="&#8593; Monter" Style="{StaticResource ToolbarButtonStyle}" Command="{Binding MoveUpCommand}" />
+            <Button Content="&#8595; Descendre" Style="{StaticResource ToolbarButtonStyle}" Command="{Binding MoveDownCommand}" />
+            <Button Content="Exclure / réintégrer" Style="{StaticResource ToolbarButtonStyle}" Command="{Binding ToggleExcludeCommand}" />
+        </StackPanel>
+
+        <!-- Aide : l'ordre de la liste = ordre de rotation. -->
+        <TextBlock Grid.Row="2"
+                   Margin="0,10,0,0"
+                   Text="Ordre de la liste = ordre de rotation. Glisser ☰ ou utiliser ↑/↓. Comptes absents/exclus ignorés par « suivant/précédent ». Sauvegarde automatique."
+                   TextWrapping="Wrap"
+                   Foreground="{StaticResource TextSecondaryBrush}"
+                   FontSize="11" />
     </Grid>
 </UserControl>

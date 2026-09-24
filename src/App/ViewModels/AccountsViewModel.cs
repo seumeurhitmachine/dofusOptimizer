@@ -5,26 +5,35 @@ using DofusSwitcher.Services;
 namespace DofusSwitcher.ViewModels;
 
 /// <summary>
-/// ViewModel de l'onglet Comptes : liste temps réel des comptes avec leur état (US-D02).
-/// S'abonne à <see cref="IWindowDetector"/> et, à chaque apparition/disparition, recalcule la vue
-/// via <see cref="AccountMerge"/> puis réconcilie <see cref="Items"/> par clé <c>characterName</c>.
-/// [ARCH] Aucun type WPF ni Dispatcher : le détecteur livre déjà ses événements sur le thread UI, si
-/// bien que ce VM reste testable avec un faux détecteur (archi §MVVM/§Threading). Lecture seule à cet
-/// Axe — réordonnancement/exclusion à l'Axe 4.
+/// ViewModel de l'onglet Comptes : liste temps réel des comptes avec leur état (US-D02), plus le
+/// réordonnancement (US-D03) et l'exclusion/réintégration (US-D04, RG-D04).
+/// S'abonne à <see cref="IWindowDetector"/> et, à chaque apparition/disparition, recalcule la vue via
+/// <see cref="AccountMerge"/> puis réconcilie <see cref="Items"/> par clé <c>characterName</c> (les
+/// instances d'items — donc la sélection — suivent le réordonnancement).
+/// [ARCH] Aucun type WPF ni Dispatcher : le détecteur livre déjà sur le thread UI, ce VM reste testable
+/// avec un faux détecteur. La persistance de l'ordre/exclusion sort par <see cref="AccountsChanged"/>,
+/// que le <see cref="MainViewModel"/> relaie à l'autosave débouncé (ref [DT-006]).
+/// [DECISION] Toute action utilisateur (réordonner/exclure) matérialise l'ordre visible complet dans
+/// la config (ordre affiché = ordre persisté), y compris les comptes jusque-là seulement détectés
+/// (ref [DT-009]). Avant toute action, un compte détecté non touché reste runtime only.
 /// </summary>
 public sealed class AccountsViewModel : ObservableObject
 {
-    private readonly IReadOnlyList<AccountConfig> _persisted;
     private readonly Dictionary<string, DetectedWindow> _detected = new(StringComparer.Ordinal);
+    private List<AccountConfig> _persisted;
+    private AccountItemViewModel? _selectedItem;
 
     /// <summary>
-    /// Câble le VM sur les comptes persistés et le détecteur fourni. L'abonnement précède l'appel à
-    /// <see cref="IWindowDetector.Start"/> (fait par la composition root) pour capter l'énumération
-    /// initiale.
+    /// Câble le VM sur les comptes persistés et le détecteur. L'abonnement précède <see cref="IWindowDetector.Start"/>
+    /// (composition root) pour capter l'énumération initiale.
     /// </summary>
     public AccountsViewModel(IReadOnlyList<AccountConfig> persisted, IWindowDetector detector)
     {
-        _persisted = persisted;
+        _persisted = [.. persisted];
+        MoveUpCommand = new RelayCommand(() => MoveSelected(-1), () => CanMoveSelected(-1));
+        MoveDownCommand = new RelayCommand(() => MoveSelected(+1), () => CanMoveSelected(+1));
+        ToggleExcludeCommand = new RelayCommand(ToggleExcludeSelected, () => SelectedItem is not null);
+
         detector.AccountAppeared += OnAccountAppeared;
         detector.AccountDisappeared += OnAccountDisappeared;
         Rebuild(); // état initial : comptes persistés, tous absents tant que rien n'est détecté.
@@ -38,6 +47,43 @@ public sealed class AccountsViewModel : ObservableObject
 
     /// <summary>Inverse de <see cref="IsEmpty"/> : pilote la visibilité de la liste (converter in-box, sans inversion).</summary>
     public bool HasItems => Items.Count > 0;
+
+    /// <summary>Compte sélectionné dans la liste — cible des commandes ↑/↓/exclure (lié à la ListBox).</summary>
+    public AccountItemViewModel? SelectedItem
+    {
+        get => _selectedItem;
+        set { if (SetProperty(ref _selectedItem, value)) RaiseCommandStates(); }
+    }
+
+    /// <summary>Monte le compte sélectionné d'un rang (US-D03). Désactivée si déjà en tête.</summary>
+    public RelayCommand MoveUpCommand { get; }
+
+    /// <summary>Descend le compte sélectionné d'un rang (US-D03). Désactivée si déjà en fin.</summary>
+    public RelayCommand MoveDownCommand { get; }
+
+    /// <summary>Bascule l'exclusion du compte sélectionné (US-D04). Désactivée sans sélection.</summary>
+    public RelayCommand ToggleExcludeCommand { get; }
+
+    /// <summary>
+    /// Émis après une modification utilisateur (ordre/exclusion) avec la liste ordonnée à persister.
+    /// La détection seule ne l'émet pas (l'état connecté/absent n'est jamais persisté).
+    /// </summary>
+    public event Action<IReadOnlyList<AccountConfig>>? AccountsChanged;
+
+    /// <summary>
+    /// Déplace un compte d'un index à un autre (glisser-déposer). Indices dans <see cref="Items"/>.
+    /// [ARCH] Chemin unique de réordonnancement appelé par les handlers DnD du code-behind.
+    /// </summary>
+    public void MoveItem(int from, int to)
+    {
+        if (from == to || from < 0 || to < 0 || from >= Items.Count || to >= Items.Count) return;
+
+        MaterializeFromItems(); // ordre visible → config (indices alignés sur Items)
+        var moved = _persisted[from];
+        _persisted.RemoveAt(from);
+        _persisted.Insert(to, moved);
+        RebuildAndPersist();
+    }
 
     private void OnAccountAppeared(DetectedWindow window)
     {
@@ -53,6 +99,56 @@ public sealed class AccountsViewModel : ObservableObject
             _detected.Remove(window.CharacterName);
             Rebuild();
         }
+    }
+
+    private bool CanMoveSelected(int direction)
+    {
+        if (SelectedItem is null) return false;
+        var index = Items.IndexOf(SelectedItem);
+        if (index < 0) return false;
+        var target = index + direction;
+        return target >= 0 && target < Items.Count;
+    }
+
+    private void MoveSelected(int direction)
+    {
+        if (SelectedItem is null) return;
+        var index = Items.IndexOf(SelectedItem);
+        MoveItem(index, index + direction);
+    }
+
+    private void ToggleExcludeSelected()
+    {
+        if (SelectedItem is null) return;
+
+        MaterializeFromItems();
+        var index = _persisted.FindIndex(a => a.CharacterName == SelectedItem.CharacterName);
+        if (index < 0) return;
+        _persisted[index] = _persisted[index] with { Excluded = !_persisted[index].Excluded };
+        RebuildAndPersist();
+    }
+
+    /// <summary>
+    /// Fige l'ordre visible courant dans <see cref="_persisted"/> (ordre affiché = ordre persisté),
+    /// matérialisant les comptes seulement détectés. Préserve <c>Excluded</c> et le <c>DirectBinding</c>
+    /// existant par clé <c>characterName</c>.
+    /// </summary>
+    private void MaterializeFromItems()
+    {
+        var existingByName = _persisted.ToDictionary(a => a.CharacterName, StringComparer.Ordinal);
+        var rebuilt = new List<AccountConfig>(Items.Count);
+        foreach (var item in Items)
+        {
+            existingByName.TryGetValue(item.CharacterName, out var existing);
+            rebuilt.Add(new AccountConfig(item.CharacterName, item.IsExcluded, existing?.DirectBinding));
+        }
+        _persisted = rebuilt;
+    }
+
+    private void RebuildAndPersist()
+    {
+        Rebuild();
+        AccountsChanged?.Invoke(_persisted);
     }
 
     /// <summary>Recalcule la fusion et réconcilie <see cref="Items"/> en place (clé = nom de personnage).</summary>
@@ -84,5 +180,13 @@ public sealed class AccountsViewModel : ObservableObject
 
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(HasItems));
+        RaiseCommandStates();
+    }
+
+    private void RaiseCommandStates()
+    {
+        MoveUpCommand.RaiseCanExecuteChanged();
+        MoveDownCommand.RaiseCanExecuteChanged();
+        ToggleExcludeCommand.RaiseCanExecuteChanged();
     }
 }

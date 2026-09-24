@@ -25,9 +25,10 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        // [ARCH] ShutdownMode manuel : à terme l'app vit dans le tray (Axe 7), fermer la
-        // fenêtre ne doit pas quitter le process. Posé dès maintenant pour cohérence.
-        ShutdownMode = ShutdownMode.OnExplicitShutdown;
+        // [DECISION] Tant que le tray n'existe pas (Axe 7), fermer la fenêtre DOIT quitter le process :
+        // sinon l'app survit sans UI (process fantôme) et OnExit (unhook WinEvent + flush autosave) ne
+        // s'exécute jamais. L'Axe 7 rétablira OnExplicitShutdown + « fermer = masquer dans le tray ».
+        ShutdownMode = ShutdownMode.OnLastWindowClose;
 
         // 1. Persistance : charger la config en tête (fichier absent/corrompu → défaut sans crash).
         IConfigStore configStore = new JsonConfigStore();

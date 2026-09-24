@@ -37,4 +37,19 @@ public static class AppConstants
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         AppFolderName,
         ConfigFileName);
+
+    /// <summary>
+    /// Variable d'environnement activant le journal de détection (diagnostic). Présente (non vide) →
+    /// la détection écrit chaque fenêtre énumérée + décision dans <see cref="DetectionLogFilePath"/>.
+    /// </summary>
+    public const string DebugEnvVar = "DOFUS_SWITCHER_DEBUG";
+
+    /// <summary>Nom du fichier journal de détection (diagnostic opt-in).</summary>
+    public const string DetectionLogFileName = "detection.log";
+
+    /// <summary>Chemin absolu du journal de détection : <c>%APPDATA%\DofusSwitcher\detection.log</c>.</summary>
+    public static string DetectionLogFilePath { get; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        AppFolderName,
+        DetectionLogFileName);
 }

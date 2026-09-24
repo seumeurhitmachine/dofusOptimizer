@@ -130,9 +130,20 @@ pure isolée ; [DT-019] `AttachThreadInput` conforme C-02 (thread id seul).
 CA-03 absent sauté, exclu sauté, CA-02 non-DOFUS, C-01 consommé, directe même exclu, un seul présent,
 prev symétrique, coordinateur pré-filtre/suspension/routage). `dotnet publish -r win-x64` → `App.exe` (77 Mo).
 
+**Correctifs post-recette :** (1) crash au démarrage — l'export réel est `SetWindowsHookExW` (pas
+`SetWindowsHookEx`) ; entry point corrigé (non couvert par les tests, chemin `OnStartup`). (2) bascule
+nécessitant deux appuis — `SetForegroundWindow` renvoie vrai sans activer (verrou de premier plan) : le
+court-circuit sautait le repli ; `WindowActivator` attache désormais **systématiquement** la file
+d'entrée du thread au premier plan (+ `BringWindowToTop`) → activation en un seul appui.
+
 **Dette technique assumée :** hooks LL + activation réelle (focus, `AttachThreadInput`, latence < 100 ms)
 non testables unitairement → recette avec clients DOFUS réels. Suspension d'interception câblée (lue par
 le coordinateur) mais sans UI de bascule ni persistance déclenchée par l'utilisateur → onglet Réglages Axe 7.
+
+**Limitation connue :** seuls les boutons souris **standard Windows** (gauche/droit/milieu, X1/X2) passent
+par `WH_MOUSE_LL`. Les boutons vendeur non standard (ex. bouton haut « DPI » de la Logitech MX Vertical)
+sont gérés par le firmware/Logitech Options+ et n'atteignent pas le hook → non captables tant qu'ils ne
+sont pas remappés vers une touche/bouton standard. À documenter en livraison.
 
 ### Axe 5 — Capture d'entrées & associations (2026-09-24)
 

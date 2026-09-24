@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<!-- Wireframe basse fidélité — Menu de la zone de notification (tray). Structure uniquement. -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Wireframe — Menu tray</title>
+<style>
+  body { margin:0; font-family:"Segoe UI",sans-serif; color:#E4E6EB; background:#141517; }
+  .desktop { min-height:340px; position:relative; }
+  .taskbar { position:absolute; bottom:0; left:0; right:0; height:40px; background:#0d0e10; border-top:1px solid #3A3D42; display:flex; align-items:center; justify-content:flex-end; padding-right:12px; gap:14px; }
+  .tray-ico { color:#3AAFA9; font-size:16px; } .tray-ico.susp { color:#9AA0A6; }
+  .clock { color:#9AA0A6; font-size:11px; }
+  .menu { position:absolute; bottom:48px; right:12px; width:230px; background:#2B2D31; border:1px solid #3A3D42; border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,.5); overflow:hidden; }
+  .mi { padding:9px 14px; font-size:13px; display:flex; align-items:center; gap:8px; }
+  .mi:hover { background:#35373C; }
+  .mi .chk { width:14px; color:#3AAFA9; }
+  .sep { border-top:1px solid #3A3D42; }
+  .head { padding:9px 14px; font-size:11px; color:#9AA0A6; }
+</style>
+</head>
+<body>
+  <div class="desktop">
+    <div class="menu">
+      <div class="head">Dofus Window Switcher — actif</div>
+      <div class="sep"></div>
+      <div class="mi">Ouvrir la configuration</div>
+      <div class="mi"><span class="chk">✓</span>Interception active <span style="flex:1"></span></div>
+      <div class="mi"><span class="chk"></span>Suspendre l'interception</div>
+      <div class="sep"></div>
+      <div class="mi">Quitter</div>
+    </div>
+    <div class="taskbar">
+      <span class="tray-ico" title="Interception active">◉</span>
+      <span class="clock">14:32</span>
+    </div>
+  </div>
+</body>
+</html>

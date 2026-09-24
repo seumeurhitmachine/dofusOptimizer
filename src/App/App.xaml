@@ -1,0 +1,15 @@
+<Application x:Class="DofusSwitcher.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- [ARCH] Pas de StartupUri : le démarrage est piloté par la composition root (App.xaml.cs). -->
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- [ARCH] Seule source des couleurs/HEX (ui-design.md §Palette). -->
+                <ResourceDictionary Source="Themes/Colors.xaml" />
+                <!-- Styles du thème sombre (référencent uniquement les brushes ci-dessus). -->
+                <ResourceDictionary Source="Themes/Controls.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

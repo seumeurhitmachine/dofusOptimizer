@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<!-- Wireframe basse fidélité — Onglet Comptes. Structure & navigation uniquement. -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Wireframe — Comptes</title>
+<style>
+  body { background:#12130f00; margin:0; font-family:"Segoe UI",sans-serif; color:#E4E6EB; }
+  .win { width:480px; margin:24px auto; background:#1E1F22; border:1px solid #3A3D42; border-radius:6px; overflow:hidden; }
+  .titlebar { background:#2B2D31; padding:8px 12px; font-size:13px; display:flex; justify-content:space-between; border-bottom:1px solid #3A3D42; }
+  .titlebar .btns span { margin-left:8px; color:#9AA0A6; }
+  .tabs { display:flex; background:#2B2D31; border-bottom:1px solid #3A3D42; }
+  .tabs a { padding:8px 16px; font-size:13px; color:#9AA0A6; text-decoration:none; border-bottom:2px solid transparent; }
+  .tabs a.active { color:#E4E6EB; border-bottom-color:#3AAFA9; font-weight:600; }
+  .body { padding:12px; }
+  .row { display:flex; align-items:center; background:#2B2D31; border:1px solid #3A3D42; border-radius:4px; padding:8px 10px; margin-bottom:6px; }
+  .row:hover { background:#35373C; }
+  .handle { color:#9AA0A6; cursor:grab; margin-right:10px; }
+  .idx { color:#9AA0A6; width:18px; }
+  .name { flex:1; font-size:13px; }
+  .state { font-size:11px; margin-left:8px; }
+  .on { color:#4CAF6E; } .off { color:#9AA0A6; }
+  .badge { font-size:10px; color:#E0A33E; border:1px solid #E0A33E; border-radius:3px; padding:1px 5px; margin-left:8px; }
+  .toolbar { margin-top:10px; display:flex; gap:6px; }
+  .btn { background:#2B2D31; border:1px solid #3A3D42; color:#E4E6EB; border-radius:4px; padding:6px 12px; font-size:12px; cursor:pointer; }
+  .btn.accent { background:#3AAFA9; border-color:#3AAFA9; color:#0f1110; }
+  .hint { color:#9AA0A6; font-size:11px; margin-top:10px; }
+</style>
+</head>
+<body>
+  <div class="win">
+    <div class="titlebar"><span>Dofus Window Switcher</span><span class="btns"><span>—</span><span>▢</span><span>✕</span></span></div>
+    <div class="tabs">
+      <a class="active" href="comptes.html">Comptes</a>
+      <a href="raccourcis.html">Raccourcis</a>
+      <a href="reglages.html">Réglages</a>
+    </div>
+    <div class="body">
+      <div class="row"><span class="handle">☰</span><span class="idx">1.</span><span class="name">Iop-Kamar</span><span class="state on">● connecté</span></div>
+      <div class="row"><span class="handle">☰</span><span class="idx">2.</span><span class="name">Cra-Lena</span><span class="state on">● connecté</span></div>
+      <div class="row"><span class="handle">☰</span><span class="idx">3.</span><span class="name">Eni-Bob</span><span class="badge">exclu</span><span class="state off">○ absent</span></div>
+      <div class="toolbar">
+        <button class="btn">↑ Monter</button>
+        <button class="btn">↓ Descendre</button>
+        <button class="btn">Exclure / réintégrer</button>
+      </div>
+      <div class="hint">Ordre de rotation = ordre de la liste. Glisser ☰ ou utiliser ↑/↓. Comptes absents/exclus ignorés par « suivant/précédent ». Sauvegarde automatique.</div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,19 @@
+<Window x:Class="DofusSwitcher.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="{Binding Title}"
+        Height="420" Width="480"
+        MinHeight="360" MinWidth="420"
+        WindowStartupLocation="CenterScreen">
+
+    <!-- Shell à onglets (ui-design.md §Navigation). Contenu des onglets vide à l'Axe 1. -->
+    <TabControl>
+        <TabItem Header="Comptes" />
+        <TabItem Header="Raccourcis" />
+        <TabItem Header="Réglages" />
+    </TabControl>
+
+</Window>

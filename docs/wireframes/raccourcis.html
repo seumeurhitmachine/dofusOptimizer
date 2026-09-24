@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<!-- Wireframe basse fidélité — Onglet Raccourcis. Structure & navigation uniquement. -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Wireframe — Raccourcis</title>
+<style>
+  body { margin:0; font-family:"Segoe UI",sans-serif; color:#E4E6EB; }
+  .win { width:480px; margin:24px auto; background:#1E1F22; border:1px solid #3A3D42; border-radius:6px; overflow:hidden; }
+  .titlebar { background:#2B2D31; padding:8px 12px; font-size:13px; display:flex; justify-content:space-between; border-bottom:1px solid #3A3D42; }
+  .titlebar .btns span { margin-left:8px; color:#9AA0A6; }
+  .tabs { display:flex; background:#2B2D31; border-bottom:1px solid #3A3D42; }
+  .tabs a { padding:8px 16px; font-size:13px; color:#9AA0A6; text-decoration:none; border-bottom:2px solid transparent; }
+  .tabs a.active { color:#E4E6EB; border-bottom-color:#3AAFA9; font-weight:600; }
+  .body { padding:12px; }
+  .section { font-size:13px; font-weight:600; margin:6px 0 8px; color:#E4E6EB; }
+  .field { display:flex; align-items:center; margin-bottom:8px; }
+  .field label { flex:1; font-size:12px; color:#9AA0A6; }
+  .keybtn { background:#2B2D31; border:1px solid #3A3D42; color:#E4E6EB; border-radius:4px; padding:6px 12px; font-size:12px; min-width:90px; text-align:center; cursor:pointer; }
+  .clear { color:#9AA0A6; font-size:11px; margin-left:8px; cursor:pointer; }
+  .sep { border-top:1px solid #3A3D42; margin:12px 0; }
+  .row { display:flex; align-items:center; margin-bottom:6px; }
+  .row .name { flex:1; font-size:13px; }
+  .conflict { color:#E5534B; font-size:11px; margin:2px 0 8px 0; }
+  .hint { color:#9AA0A6; font-size:11px; margin-top:10px; }
+</style>
+</head>
+<body>
+  <div class="win">
+    <div class="titlebar"><span>Dofus Window Switcher</span><span class="btns"><span>—</span><span>▢</span><span>✕</span></span></div>
+    <div class="tabs">
+      <a href="comptes.html">Comptes</a>
+      <a class="active" href="raccourcis.html">Raccourcis</a>
+      <a href="reglages.html">Réglages</a>
+    </div>
+    <div class="body">
+      <div class="section">Rotation</div>
+      <div class="field"><label>Compte suivant</label><span class="keybtn">XButton2</span><span class="clear">effacer</span></div>
+      <div class="field"><label>Compte précédent</label><span class="keybtn">XButton1</span><span class="clear">effacer</span></div>
+
+      <div class="sep"></div>
+      <div class="section">Activation directe (optionnel)</div>
+      <div class="row"><span class="name">Iop-Kamar</span><span class="keybtn">F1</span><span class="clear">effacer</span></div>
+      <div class="row"><span class="name">Cra-Lena</span><span class="keybtn">F1</span><span class="clear">effacer</span></div>
+      <div class="conflict">⚠ Conflit : « F1 » est déjà assignée à Iop-Kamar. Choisir une autre entrée.</div>
+      <div class="row"><span class="name">Eni-Bob</span><span class="keybtn" style="color:#9AA0A6">non assignée</span></div>
+
+      <div class="hint">Clic sur un bouton → « appuyez sur une entrée ». Une seule touche/bouton par association (pas de combinaison). Interception uniquement quand un client DOFUS a le focus.</div>
+    </div>
+  </div>
+</body>
+</html>

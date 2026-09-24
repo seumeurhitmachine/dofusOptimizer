@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<!-- Wireframe basse fidélité — Modale de capture d'entrée. Structure uniquement. -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Wireframe — Capture d'entrée</title>
+<style>
+  body { margin:0; font-family:"Segoe UI",sans-serif; color:#E4E6EB; background:#141517; }
+  .scrim { min-height:340px; display:flex; align-items:center; justify-content:center; }
+  .modal { width:320px; background:#2B2D31; border:1px solid #3A3D42; border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,.5); padding:20px; text-align:center; }
+  .title { font-size:14px; font-weight:600; margin-bottom:16px; }
+  .pad { border:2px dashed #3AAFA9; border-radius:6px; padding:22px; color:#E4E6EB; font-size:13px; background:#1E1F22; }
+  .pad small { display:block; color:#9AA0A6; font-size:11px; margin-top:8px; }
+  .actions { margin-top:16px; display:flex; justify-content:center; gap:8px; }
+  .btn { background:#1E1F22; border:1px solid #3A3D42; color:#E4E6EB; border-radius:4px; padding:6px 14px; font-size:12px; cursor:pointer; }
+  .err { color:#E5534B; font-size:11px; margin-top:10px; min-height:14px; }
+</style>
+</head>
+<body>
+  <div class="scrim">
+    <div class="modal">
+      <div class="title">Assigner une entrée — « Compte suivant »</div>
+      <div class="pad">Appuyez sur une touche ou un bouton…<small>Une seule entrée. Les combinaisons ne sont pas acceptées.</small></div>
+      <div class="err">⚠ Cette entrée est déjà utilisée par « Compte précédent ».</div>
+      <div class="actions">
+        <button class="btn">Annuler (Échap)</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

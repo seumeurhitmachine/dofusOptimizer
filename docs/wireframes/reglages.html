@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<!-- Wireframe basse fidélité — Onglet Réglages. Structure & navigation uniquement. -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Wireframe — Réglages</title>
+<style>
+  body { margin:0; font-family:"Segoe UI",sans-serif; color:#E4E6EB; }
+  .win { width:480px; margin:24px auto; background:#1E1F22; border:1px solid #3A3D42; border-radius:6px; overflow:hidden; }
+  .titlebar { background:#2B2D31; padding:8px 12px; font-size:13px; display:flex; justify-content:space-between; border-bottom:1px solid #3A3D42; }
+  .titlebar .btns span { margin-left:8px; color:#9AA0A6; }
+  .tabs { display:flex; background:#2B2D31; border-bottom:1px solid #3A3D42; }
+  .tabs a { padding:8px 16px; font-size:13px; color:#9AA0A6; text-decoration:none; border-bottom:2px solid transparent; }
+  .tabs a.active { color:#E4E6EB; border-bottom-color:#3AAFA9; font-weight:600; }
+  .body { padding:12px; }
+  .opt { display:flex; align-items:center; margin-bottom:12px; }
+  .opt .label { flex:1; }
+  .opt .label small { display:block; color:#9AA0A6; font-size:11px; }
+  .sw { width:38px; height:20px; border-radius:10px; background:#3A3D42; position:relative; }
+  .sw.on { background:#3AAFA9; }
+  .sw i { position:absolute; top:2px; width:16px; height:16px; border-radius:50%; background:#E4E6EB; }
+  .sw i { left:2px; } .sw.on i { left:20px; }
+  .sep { border-top:1px solid #3A3D42; margin:12px 0; }
+  .btn { background:#2B2D31; border:1px solid #3A3D42; color:#E4E6EB; border-radius:4px; padding:6px 12px; font-size:12px; cursor:pointer; margin-right:6px; }
+  .about { color:#9AA0A6; font-size:11px; margin-top:12px; }
+</style>
+</head>
+<body>
+  <div class="win">
+    <div class="titlebar"><span>Dofus Window Switcher</span><span class="btns"><span>—</span><span>▢</span><span>✕</span></span></div>
+    <div class="tabs">
+      <a href="comptes.html">Comptes</a>
+      <a href="raccourcis.html">Raccourcis</a>
+      <a class="active" href="reglages.html">Réglages</a>
+    </div>
+    <div class="body">
+      <div class="opt"><div class="label">Suspendre l'interception<small>Rend leur comportement natif à toutes les entrées</small></div><div class="sw"><i></i></div></div>
+      <div class="opt"><div class="label">Démarrer avec Windows<small>Désactivé par défaut</small></div><div class="sw"><i></i></div></div>
+      <div class="sep"></div>
+      <div class="label" style="margin-bottom:8px;">Configuration</div>
+      <button class="btn">Exporter…</button>
+      <button class="btn">Importer…</button>
+      <div class="about">Dofus Window Switcher · v0.1 · Config : %APPDATA%\DofusSwitcher\config.json<br>N'interagit jamais avec le processus du jeu (fenêtres uniquement).</div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    [ARCH] Application livrée = ZÉRO PackageReference. Tout vient du SDK .NET
+    (WPF, WinForms, System.Text.Json, interop Win32). Réf : ARCHI-DOTNET-WPF.md.
+    Les propriétés TFM/Nullable/UseWPF/UseWindowsForms + publication sont dans
+    Directory.Build.props (racine).
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <ApplicationIcon>Resources/app.ico</ApplicationIcon>
+    <!-- [DECISION] Namespace racine DofusSwitcher (l'assembly/exe reste App.exe via le nom de projet).
+         Évite le conflit namespace==classe App qui casse le point d'entrée WPF généré. -->
+    <RootNamespace>DofusSwitcher</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Icône embarquée en ressource : réutilisée par la fenêtre et le NotifyIcon (tray, Axe 7). -->
+    <Resource Include="Resources/app.ico" />
+  </ItemGroup>
+
+</Project>

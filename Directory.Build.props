@@ -1,0 +1,36 @@
+<Project>
+
+  <!--
+    Propriétés communes à tous les projets (app + tests).
+    [ARCH] Stack verrouillée : .NET 10 · WPF · WinForms (NotifyIcon) · zéro NuGet dans l'app.
+    Réf : docs/agent/archis/ARCHI-DOTNET-WPF.md §Publication.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- WinForms activé pour le NotifyIcon (tray) in-box, en plus de WPF. -->
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+
+  <!--
+    Publication : exécutable autonome single-file self-contained (win-x64).
+    [DECISION] Ces propriétés ne s'activent que lorsqu'un RuntimeIdentifier est fourni
+    (`dotnet publish -c Release -r win-x64`). Sans RID, un `dotnet build`/`dotnet test`
+    reste framework-dependent — indispensable car SelfContained=true sans RID casse le build,
+    et cela évite de publier le projet de tests en single-file.
+    [ARCH] Jamais de PublishTrimmed/PublishAot : WPF casse le rendu XAML.
+  -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <PublishTrimmed>false</PublishTrimmed>
+  </PropertyGroup>
+
+</Project>

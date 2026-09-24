@@ -2,6 +2,9 @@ using System.Collections.ObjectModel;
 using DofusSwitcher.Models;
 using DofusSwitcher.Services;
 
+// [WARN] App référence WinForms : Binding est ambigu (System.Windows.Forms.Binding). Alias explicite.
+using Binding = DofusSwitcher.Models.Binding;
+
 namespace DofusSwitcher.ViewModels;
 
 /// <summary>
@@ -82,6 +85,21 @@ public sealed class AccountsViewModel : ObservableObject
         var moved = _persisted[from];
         _persisted.RemoveAt(from);
         _persisted.Insert(to, moved);
+        RebuildAndPersist();
+    }
+
+    /// <summary>
+    /// Affecte (ou efface) l'activation directe d'un compte par son nom (Axe 5) — chemin unique de
+    /// mutation du <c>DirectBinding</c>. Matérialise l'ordre visible d'abord (comme les autres actions,
+    /// ref [DT-013]) pour que le compte, s'il n'était que détecté, soit persisté avec son binding, puis
+    /// émet <see cref="AccountsChanged"/>. Sans compte correspondant : no-op.
+    /// </summary>
+    public void SetDirectBinding(string characterName, Binding? binding)
+    {
+        MaterializeFromItems();
+        var index = _persisted.FindIndex(a => a.CharacterName == characterName);
+        if (index < 0) return;
+        _persisted[index] = _persisted[index] with { DirectBinding = binding };
         RebuildAndPersist();
     }
 

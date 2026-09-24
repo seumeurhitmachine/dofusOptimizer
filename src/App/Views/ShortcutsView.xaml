@@ -1,0 +1,151 @@
+<UserControl x:Class="DofusSwitcher.Views.ShortcutsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             Background="{StaticResource BackgroundBrush}">
+
+    <!--
+        Onglet Raccourcis (ui-design.md §Composants/§Interactions, wireframes/raccourcis.html). Sections
+        Rotation (suivant/précédent) + Activation directe (par compte). Clic sur un bouton → modale de
+        capture ; conflit signalé inline en error sous l'association fautive (RG-S05).
+        [ARCH] Aucune valeur HEX ici : uniquement des brushes de Colors.xaml.
+    -->
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+
+        <!-- Bouton affichant l'entrée courante (clic → modale de capture). -->
+        <Style x:Key="KeyButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="MinWidth" Value="96" />
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root"
+                                Background="{StaticResource SurfaceBrush}"
+                                BorderBrush="{StaticResource SurfaceAltBrush}"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{StaticResource SurfaceAltBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Lien « effacer » discret. -->
+        <Style x:Key="ClearButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="8,0,0,0" />
+            <Setter Property="Padding" Value="4,2" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="Transparent" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Ligne d'association réutilisable (DataContext = ShortcutSlotViewModel). -->
+        <DataTemplate x:Key="SlotTemplate">
+            <StackPanel Margin="0,0,0,4">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding Label}"
+                               VerticalAlignment="Center"
+                               FontSize="12"
+                               Foreground="{StaticResource TextSecondaryBrush}" />
+                    <Button Grid.Column="1"
+                            Style="{StaticResource KeyButtonStyle}"
+                            Content="{Binding Display}"
+                            Command="{Binding CaptureCommand}"
+                            ToolTip="Cliquer puis appuyer sur une touche ou un bouton" />
+                    <Button Grid.Column="2"
+                            Style="{StaticResource ClearButtonStyle}"
+                            Content="effacer"
+                            Command="{Binding ClearCommand}" />
+                </Grid>
+                <!-- Conflit inline (error) sous l'association fautive (RG-S05). -->
+                <TextBlock Text="{Binding ConflictMessage}"
+                           FontSize="11"
+                           TextWrapping="Wrap"
+                           Margin="0,2,0,6"
+                           Foreground="{StaticResource ErrorBrush}"
+                           Visibility="{Binding HasConflict, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="12">
+            <!-- Rotation : suivant / précédent. -->
+            <TextBlock Text="Rotation"
+                       FontSize="13" FontWeight="SemiBold"
+                       Margin="0,0,0,8"
+                       Foreground="{StaticResource TextPrimaryBrush}" />
+            <ContentControl ContentTemplate="{StaticResource SlotTemplate}" Content="{Binding NextSlot}" />
+            <ContentControl ContentTemplate="{StaticResource SlotTemplate}" Content="{Binding PrevSlot}" />
+
+            <Border Margin="0,12" BorderBrush="{StaticResource SurfaceAltBrush}" BorderThickness="0,1,0,0" />
+
+            <!-- Activation directe (optionnel) : une ligne par compte persisté. -->
+            <TextBlock Text="Activation directe (optionnel)"
+                       FontSize="13" FontWeight="SemiBold"
+                       Margin="0,0,0,8"
+                       Foreground="{StaticResource TextPrimaryBrush}" />
+
+            <ItemsControl ItemsSource="{Binding DirectSlots}"
+                          ItemTemplate="{StaticResource SlotTemplate}"
+                          Visibility="{Binding HasDirectSlots, Converter={StaticResource BoolToVisibility}}" />
+
+            <TextBlock Text="Aucun compte enregistré. Les comptes apparaissent après une action sur l'onglet Comptes (réordonner/exclure)."
+                       TextWrapping="Wrap"
+                       FontSize="11"
+                       Foreground="{StaticResource TextSecondaryBrush}">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <!-- Visible seulement quand aucun compte n'alimente l'activation directe. -->
+                        <Setter Property="Visibility" Value="Visible" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasDirectSlots}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+
+            <!-- Aide. -->
+            <TextBlock Margin="0,12,0,0"
+                       Text="Clic sur un bouton → « appuyez sur une entrée ». Une seule touche/bouton par association (pas de combinaison). L'interception conditionnée au focus DOFUS arrive à l'Axe 6."
+                       TextWrapping="Wrap"
+                       FontSize="11"
+                       Foreground="{StaticResource TextSecondaryBrush}" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

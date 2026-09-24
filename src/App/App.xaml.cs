@@ -38,9 +38,10 @@ public partial class App : Application
         _autosave = new ConfigAutosaveService(configStore);
         _windowDetector = new WindowDetector();
 
-        // 3. ViewModel racine : reçoit la config et le détecteur ; le VM Comptes s'abonne dès ici,
-        //    avant Start, pour capter l'énumération initiale.
-        var mainViewModel = new MainViewModel(config, _windowDetector);
+        // 3. ViewModel racine : reçoit la config, le détecteur et le service de capture (modale WPF) ;
+        //    le VM Comptes s'abonne dès ici, avant Start, pour capter l'énumération initiale.
+        IInputCaptureService inputCapture = new InputCaptureService();
+        var mainViewModel = new MainViewModel(config, _windowDetector, inputCapture);
         mainViewModel.ConfigChanged += _autosave.Notify;
 
         // 4. Fenêtre principale.

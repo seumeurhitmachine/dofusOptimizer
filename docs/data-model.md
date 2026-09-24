@@ -85,9 +85,14 @@ partout où il apparaît.
 
 - Représente **une seule** entrée physique — une touche **ou** un bouton souris.
   Aucune combinaison / modificateur (D-01).
-- `kind ∈ {Key, MouseButton}`. `code` : Virtual-Key code (`Key`) ou index de bouton
-  X (`MouseButton`, ex. XButton1/2). Deux `Binding` sont égaux ssi `kind` **et**
-  `code` égaux (base de la détection de conflit).
+- `kind ∈ {Key, MouseButton}`. Deux `Binding` sont égaux ssi `kind` **et** `code`
+  égaux (base de la détection de conflit).
+- `code` selon `kind` :
+  - `Key` : Virtual-Key code Windows (ex. `0x41` = A, `0x70` = F1).
+  - `MouseButton` : code de bouton souris. **Toute la souris est acceptée** (pas de
+    whitelist) : `1` = XButton1, `2` = XButton2 (conservent les défauts
+    `précédent`/`suivant`), `3` = bouton gauche, `4` = bouton droit, `5` = bouton
+    milieu. Encodage centralisé dans `src/App/Models/InputCapture.cs`.
 
 ---
 
@@ -116,3 +121,4 @@ partout où il apparaît.
 |---|---|---|
 | pré-Axe 1 | 2026-09-24 | Création initiale (schemaVersion 1) |
 | Axe 2 | 2026-09-24 | Matérialisation du schéma en code (`Binding`/`AccountConfig`/`AppConfig`, `AppJsonContext`, `JsonConfigStore`). Aucun champ modifié : schemaVersion reste 1. Invariant d'unicité globale porté par `AppConfig.HasBindingConflicts()`. |
+| Axe 5 | 2026-09-24 | Encodage `Binding.Code` pour `MouseButton` étendu à toute la souris (gauche=3, droit=4, milieu=5 ; XButton1/2=1/2 inchangés). Aucun champ ni schemaVersion modifié (valeurs de `code` élargies). Encodage/formatage centralisés dans `InputCapture`. |

@@ -4,8 +4,8 @@
 
 > Mettre à jour à chaque /finalise. Max 30 lignes.
 
-**Dernier Axe complété :** Axe 4 — Ordre & exclusion (onglet Comptes) — 2026-09-24
-**Phase :** Axes initiaux en cours (Axe 4 livré, Axe 5 à démarrer)
+**Dernier Axe complété :** Axe 5 — Capture d'entrées & associations — 2026-09-24
+**Phase :** Axes initiaux en cours (Axe 5 livré, Axe 6 à démarrer)
 
 **Fonctionnalités actives :**
 - (aucune US — socle infra) Solution `.slnx` + `src/App` (WPF) + `tests/App.Tests` (xUnit).
@@ -25,6 +25,13 @@
 - **Ordre & exclusion (US-D03/D04)** : `AccountsViewModel` — commandes ↑/↓ + glisser-déposer (poignée
   `☰`, code-behind DnD) + exclusion/réintégration ; toute action matérialise l'ordre visible dans
   `AppConfig.Accounts` (ordre liste = rotation) et déclenche l'autosave via `MainViewModel.ConfigChanged`.
+- **Capture & associations (US-S04/S05)** : cœur pur `InputCapture` (encodage souris — toute la souris,
+  X1/X2=1/2 + gauche/droit/milieu=3/4/5 —, rejet combinaison/modificateur D-01, formatage lisible).
+  Modale `CaptureInputWindow` (événements `PreviewKeyDown/MouseDown` de la fenêtre focalisée, **pas** de
+  hook global) via l'abstraction `IInputCaptureService`. Onglet Raccourcis (`ShortcutsViewModel` +
+  `ShortcutSlotViewModel` + `ShortcutsView`) : suivant/précédent + directes par compte, effacer, conflit
+  inline (RG-S05, réutilise `HasBindingConflicts`, refus avant persistance). `MainViewModel` = seul
+  writer de `Config` ; `DirectBinding` via chemin unique `AccountsViewModel.SetDirectBinding`.
 
 **Contraintes techniques actives :**
 - .NET 10 + WPF, MVVM manuel, **zéro NuGet** dans l'app, publish single-file self-contained.
@@ -67,6 +74,15 @@
 - [DT-013] Toute action ordre/exclusion **matérialise l'ordre visible complet** dans `AppConfig.Accounts`
   (ordre affiché = ordre persisté), matérialisant les comptes seulement détectés ; `DirectBinding`
   préservé par clé. La détection seule ne persiste jamais.
+- [DT-014] Capture via abstraction `IInputCaptureService` (impl WPF `InputCaptureService` côté Views) :
+  les ViewModels restent sans type WPF et testables avec un faux service. La modale n'utilise que les
+  événements d'entrée de la fenêtre focalisée (jamais de `SetWindowsHookEx` — réservé Axe 6, anti-bot).
+- [DT-015] `MainViewModel` = **seul writer** de `AppConfig`. Suivant/précédent édités top-level ; les
+  `DirectBinding` passent par le chemin unique `AccountsViewModel.SetDirectBinding` (sinon un
+  réordonnancement ultérieur écraserait le binding via `MaterializeFromItems`). Conflit détecté dans le
+  VM (réutilise `HasBindingConflicts`), refus avant persistance ; réassigner à soi-même ≠ conflit.
+- [DT-016] Lignes « activation directe » sourcées de `AppConfig.Accounts` (comptes persistés/matérialisés),
+  pas du détecteur : un compte seulement détecté apparaît après une action sur l'onglet Comptes (DT-013).
 
 **Fichiers critiques — ne pas modifier sans discussion :**
 - `src/App/Interop/NativeMethods.cs` (contraintes C-02/C-03).
@@ -78,6 +94,31 @@
 ## Historique des Axes
 
 <!-- Une entrée par Axe complété. Ajoutée par /finalise. -->
+
+### Axe 5 — Capture d'entrées & associations (2026-09-24)
+
+**Périmètre livré :** cœur pur `InputCapture` (encodage souris étendu à toute la souris, rejet
+combinaison/modificateur D-01, formatage lisible) ; modale `CaptureInputWindow` écoutant les événements
+d'entrée de la fenêtre focalisée (pas de hook global) via `IInputCaptureService` ; onglet Raccourcis
+(`ShortcutsViewModel`/`ShortcutSlotViewModel`/`ShortcutsView`) — associations suivant/précédent +
+directes par compte, effacer, conflit inline avec refus (RG-S05). Couvre US-S04, US-S05, RG-S04/S05.
+
+**Changements structurants :** `MainViewModel` devient le **seul writer** de `AppConfig` (nouveau ctor
+avec `IInputCaptureService` ; méthodes `SetNext/PrevBinding` ; `RaiseConfigChanged` rafraîchit l'onglet
+Raccourcis puis notifie l'autosave). `AccountsViewModel.SetDirectBinding` = chemin unique de mutation du
+`DirectBinding` (matérialise puis persiste). Encodage `Binding.Code` (souris) élargi — `data-model §Binding`
+mis à jour (schemaVersion inchangée). `MainWindow` héberge `ShortcutsView` (onglet Raccourcis câblé).
+
+**Décisions :** [DT-014] capture via abstraction (VM sans WPF) ; [DT-015] seul writer + conflit dans le VM ;
+[DT-016] lignes directes sourcées de `AppConfig.Accounts`.
+
+**Vérifications :** `dotnet build` 0 erreur / 0 warning ; `dotnet test` 73/73 (24 nouveaux : encodage
+X1/X2 + boutons principaux, formatage, rejet modificateur/combinaison, assignation + émission
+`ConfigChanged`, conflit RG-S05 refusé, annulation, effacement, activation directe matérialisée + conflit).
+
+**Dette technique assumée :** logique de la modale WPF (Échap/combinaison en conditions réelles, boutons
+souris physiques) non testable unitairement → recette. Onglet Réglages (Axe 7) encore vide. Interception
+conditionnée au focus + bascule (US-S01/S02/S03) et rotation `docs/algos/rotation.md` → Axe 6.
 
 ### Axe 4 — Ordre & exclusion (onglet Comptes) (2026-09-24)
 

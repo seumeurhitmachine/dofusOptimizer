@@ -1,0 +1,75 @@
+<Window x:Class="DofusSwitcher.Views.CaptureInputWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Assigner une entrée"
+        Width="340" SizeToContent="Height"
+        WindowStyle="ToolWindow"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource BackgroundBrush}"
+        FocusManager.FocusedElement="{Binding RelativeSource={RelativeSource Self}}">
+
+    <!--
+        Modale de capture (ui-design.md §Modales, wireframes/capture-modal.html). Écoute les événements
+        d'entrée de CETTE fenêtre focalisée uniquement (PreviewKeyDown/PreviewMouseDown) — PAS de hook
+        bas niveau global (réservé Axe 6). Capte UNE entrée ; Échap = annuler ; combinaison/modificateur
+        rejeté avec message error. Voir le code-behind pour la logique (InputCapture, pur).
+    -->
+
+    <Border Margin="16" Padding="20"
+            Background="{StaticResource SurfaceBrush}"
+            BorderBrush="{StaticResource SurfaceAltBrush}"
+            BorderThickness="1"
+            CornerRadius="6">
+        <StackPanel>
+            <TextBlock x:Name="TitleText"
+                       Text="Assigner une entrée"
+                       FontSize="14" FontWeight="SemiBold"
+                       TextWrapping="Wrap"
+                       HorizontalAlignment="Center"
+                       Margin="0,0,0,16"
+                       Foreground="{StaticResource TextPrimaryBrush}" />
+
+            <Border Padding="22" CornerRadius="6"
+                    Background="{StaticResource BackgroundBrush}"
+                    BorderBrush="{StaticResource PrimaryBrush}"
+                    BorderThickness="2">
+                <StackPanel>
+                    <TextBlock Text="Appuyez sur une touche ou un bouton…"
+                               FontSize="13"
+                               TextAlignment="Center"
+                               Foreground="{StaticResource TextPrimaryBrush}" />
+                    <TextBlock Text="Une seule entrée. Les combinaisons ne sont pas acceptées."
+                               FontSize="11"
+                               TextAlignment="Center"
+                               Margin="0,8,0,0"
+                               Foreground="{StaticResource TextSecondaryBrush}" />
+                </StackPanel>
+            </Border>
+
+            <TextBlock x:Name="ErrorText"
+                       FontSize="11"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap"
+                       Margin="0,10,0,0"
+                       MinHeight="14"
+                       Foreground="{StaticResource ErrorBrush}" />
+
+            <Button x:Name="CancelButton"
+                    Content="Annuler (Échap)"
+                    HorizontalAlignment="Center"
+                    Margin="0,16,0,0"
+                    Padding="14,6"
+                    FontSize="12"
+                    IsCancel="True"
+                    Foreground="{StaticResource TextPrimaryBrush}"
+                    Background="{StaticResource BackgroundBrush}"
+                    BorderBrush="{StaticResource SurfaceAltBrush}"
+                    Click="CancelButton_Click" />
+        </StackPanel>
+    </Border>
+</Window>

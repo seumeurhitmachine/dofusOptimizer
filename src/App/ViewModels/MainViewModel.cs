@@ -15,8 +15,13 @@ namespace DofusSwitcher.ViewModels;
 /// </summary>
 public sealed class MainViewModel : ObservableObject
 {
-    /// <summary>Crée le ViewModel racine à partir de la config, du détecteur et du service de capture.</summary>
-    public MainViewModel(AppConfig config, IWindowDetector detector, IInputCaptureService capture)
+    /// <summary>Crée le ViewModel racine à partir de la config, du détecteur et des services (capture, registre, dialogues).</summary>
+    public MainViewModel(
+        AppConfig config,
+        IWindowDetector detector,
+        IInputCaptureService capture,
+        IStartupRegistryService startup,
+        IFileDialogService fileDialog)
     {
         Config = config;
         Accounts = new AccountsViewModel(config.Accounts, detector);
@@ -25,6 +30,8 @@ public sealed class MainViewModel : ObservableObject
         // Raccourcis (Axe 5) : suivant/précédent top-level ici, activation directe via AccountsViewModel
         // (chemin unique de mutation des comptes — préserve le DirectBinding lors d'un réordonnancement).
         Shortcuts = new ShortcutsViewModel(config, capture, SetNextBinding, SetPrevBinding, Accounts.SetDirectBinding);
+        // Réglages (Axe 7) : suspension + démarrage Windows + export/import, tous remontés ici (seul writer).
+        Settings = new SettingsViewModel(config, startup, fileDialog, SetInterceptionSuspended, SetStartWithWindows, ApplyImportedConfig);
     }
 
     /// <summary>Titre affiché dans la barre de la fenêtre.</summary>
@@ -35,6 +42,9 @@ public sealed class MainViewModel : ObservableObject
 
     /// <summary>ViewModel de l'onglet Raccourcis : associations suivant/précédent + directes par compte.</summary>
     public ShortcutsViewModel Shortcuts { get; }
+
+    /// <summary>ViewModel de l'onglet Réglages : suspension, démarrage Windows, export/import, à-propos.</summary>
+    public SettingsViewModel Settings { get; }
 
     /// <summary>
     /// Construit l'instantané de rotation (Axe 6) depuis la config (ordre, associations) et l'état runtime
@@ -94,10 +104,36 @@ public sealed class MainViewModel : ObservableObject
         RaiseConfigChanged();
     }
 
-    /// <summary>Rafraîchit l'onglet Raccourcis sur la nouvelle config puis notifie l'autosave.</summary>
+    /// <summary>Bascule la suspension globale de l'interception (RG-T02) — appelée par le tray ou l'onglet Réglages.</summary>
+    private void SetInterceptionSuspended(bool suspended)
+    {
+        Config = Config with { InterceptionSuspended = suspended };
+        RaiseConfigChanged();
+    }
+
+    /// <summary>Persiste l'intention de démarrage avec Windows (RG-T05). L'écriture registre est faite par le service côté Réglages.</summary>
+    private void SetStartWithWindows(bool enabled)
+    {
+        Config = Config with { StartWithWindows = enabled };
+        RaiseConfigChanged();
+    }
+
+    /// <summary>
+    /// Applique une configuration importée (US-P04), déjà validée par <see cref="Persistence.ConfigImport"/>.
+    /// Remplace la config, recharge les comptes persistés puis rafraîchit tous les onglets et persiste (autosave).
+    /// </summary>
+    private void ApplyImportedConfig(AppConfig imported)
+    {
+        Config = imported;
+        Accounts.LoadPersisted(imported.Accounts);
+        RaiseConfigChanged();
+    }
+
+    /// <summary>Rafraîchit les onglets Raccourcis et Réglages sur la nouvelle config puis notifie l'autosave.</summary>
     private void RaiseConfigChanged()
     {
         Shortcuts.OnConfigChanged(Config);
+        Settings.OnConfigChanged(Config);
         ConfigChanged?.Invoke(Config);
     }
 }

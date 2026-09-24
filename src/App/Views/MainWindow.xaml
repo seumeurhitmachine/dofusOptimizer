@@ -10,7 +10,7 @@
         MinHeight="360" MinWidth="420"
         WindowStartupLocation="CenterScreen">
 
-    <!-- Shell à onglets (ui-design.md §Navigation). Comptes (Axe 3) + Raccourcis (Axe 5) ; Réglages à venir. -->
+    <!-- Shell à onglets (ui-design.md §Navigation). Comptes (Axe 3) + Raccourcis (Axe 5) + Réglages (Axe 7). -->
     <TabControl>
         <TabItem Header="Comptes">
             <views:AccountsView DataContext="{Binding Accounts}" />
@@ -18,7 +18,9 @@
         <TabItem Header="Raccourcis">
             <views:ShortcutsView DataContext="{Binding Shortcuts}" />
         </TabItem>
-        <TabItem Header="Réglages" />
+        <TabItem Header="Réglages">
+            <views:ReglagesView DataContext="{Binding Settings}" />
+        </TabItem>
     </TabControl>
 
 </Window>

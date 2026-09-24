@@ -22,7 +22,7 @@ public class ShortcutsViewModelTests
     {
         var detector = new FakeWindowDetector();
         var capture = new FakeInputCaptureService(captured);
-        var vm = new MainViewModel(config, detector, capture);
+        var vm = new MainViewModel(config, detector, capture, new FakeStartupRegistryService(), new FakeFileDialogService());
         var emitted = new List<AppConfig>();
         vm.ConfigChanged += emitted.Add;
         return (vm, emitted);

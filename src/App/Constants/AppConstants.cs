@@ -11,6 +11,12 @@ public static class AppConstants
     /// <summary>Dossier applicatif sous <c>%APPDATA%</c>.</summary>
     public const string AppFolderName = "DofusSwitcher";
 
+    /// <summary>
+    /// Titre visible de l'application (barre de fenêtre, info-bulle du tray). Texte centralisé
+    /// (archi §Règles de constantes) — à extraire dans une <c>Strings</c> localisable si besoin.
+    /// </summary>
+    public const string AppTitle = "Dofus Window Switcher";
+
     /// <summary>Nom du fichier de configuration JSON.</summary>
     public const string ConfigFileName = "config.json";
 
@@ -52,4 +58,16 @@ public static class AppConstants
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         AppFolderName,
         DetectionLogFileName);
+
+    /// <summary>
+    /// Clé de registre du démarrage automatique par utilisateur (RG-T05). <c>HKCU</c> — jamais
+    /// <c>HKLM</c> ni le dossier <c>Startup</c> : pas d'élévation requise (ENF-005).
+    /// </summary>
+    public const string StartupRegistryKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
+
+    /// <summary>Nom de la valeur posée sous la clé <c>Run</c> pour le démarrage automatique.</summary>
+    public const string StartupRegistryValueName = AppFolderName;
+
+    /// <summary>Filtre des boîtes de dialogue export/import (JSON, US-P04).</summary>
+    public const string ConfigFileDialogFilter = "Configuration JSON (*.json)|*.json|Tous les fichiers (*.*)|*.*";
 }

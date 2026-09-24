@@ -89,6 +89,18 @@ public sealed class AccountsViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Remplace l'ensemble des comptes persistés (import de configuration, US-P04) et recalcule l'affichage.
+    /// [DECISION] N'émet pas <see cref="AccountsChanged"/> : l'import est appliqué en bloc par le
+    /// <see cref="MainViewModel"/>, qui persiste la config complète — éviter une double écriture. L'état
+    /// runtime (comptes détectés/connectés) est préservé par la fusion sur les nouveaux comptes.
+    /// </summary>
+    public void LoadPersisted(IReadOnlyList<AccountConfig> persisted)
+    {
+        _persisted = [.. persisted];
+        Rebuild();
+    }
+
+    /// <summary>
     /// Affecte (ou efface) l'activation directe d'un compte par son nom (Axe 5) — chemin unique de
     /// mutation du <c>DirectBinding</c>. Matérialise l'ordre visible d'abord (comme les autres actions,
     /// ref [DT-013]) pour que le compte, s'il n'était que détecté, soit persisté avec son binding, puis

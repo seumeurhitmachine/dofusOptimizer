@@ -4,8 +4,8 @@
 
 > Mettre à jour à chaque /finalise. Max 30 lignes.
 
-**Dernier Axe complété :** Axe 6 — Interception & bascule de focus (cœur) — 2026-09-24
-**Phase :** Axes initiaux en cours (Axe 6 livré, Axe 7 à démarrer — dernier Axe)
+**Dernier Axe complété :** Axe 7 — Tray, cycle de vie & réglages — 2026-09-24
+**Phase :** Axes initiaux **terminés** (Axe 7 = dernier Axe livré) → Phase 5 Livraison (`/livraison`)
 
 **Fonctionnalités actives :**
 - (aucune US — socle infra) Solution `.slnx` + `src/App` (WPF) + `tests/App.Tests` (xUnit).
@@ -38,6 +38,14 @@
   `InputCapture`, callback minimal `[UnmanagedCallersOnly]`). Activation `WindowActivator`
   (`SetForegroundWindow` + repli `AttachThreadInput`, non synthétique). `SwitchCoordinator` = glue
   (pré-filtre set de bindings + suspension, snapshot via `MainViewModel.BuildRotationSnapshot` sur thread UI).
+- **Tray, cycle de vie & réglages (US-T01/T02/T04, US-P04)** : `TrayIconController` (`NotifyIcon` WinForms, menu
+  Ouvrir · Suspendre/Réactiver (case) · Quitter ; double-clic → fenêtre ; état suspendu reflété par info-bulle + case ;
+  réf forte dans `App`, `Dispose` en `OnExit`). Cycle de vie : `ShutdownMode.OnExplicitShutdown`, fermeture fenêtre =
+  masquer (drapeau `MainWindow.ForceClose`), sortie réelle via « Quitter » (`Application.Shutdown`). Onglet Réglages
+  (`SettingsViewModel`/`ReglagesView`) : bascule suspension (partage la source du tray via `MainViewModel`), démarrage
+  Windows (`IStartupRegistryService` → `HKCU\...\Run`, off par défaut, réconcilié au démarrage), export/import config
+  (`IFileDialogService` + `ConfigImport` pur pour valider sans effet de bord ; import → `MainViewModel.ApplyImportedConfig`
+  recharge comptes/raccourcis + autosave). `AccountsViewModel.LoadPersisted` pour le rechargement à l'import.
 
 **Contraintes techniques actives :**
 - .NET 10 + WPF, MVVM manuel, **zéro NuGet** dans l'app, publish single-file self-contained.
@@ -98,6 +106,19 @@
 - [DT-019] `AttachThreadInput` (repli d'activation) utilise `GetWindowThreadProcessId` pour l'**identifiant
   de thread seul** — aucun `OpenProcess`/handle process : conforme C-02/C-03 (switching.md §3.x). `[WARN]`
   de `NativeMethods` rescopé (prohibition d'inspection process = *reconnaissance*, PO-001).
+- [DT-020] `ShutdownMode.OnExplicitShutdown` + « fermer = masquer » (`MainWindow.ForceClose`) : **lève [DT-012]**.
+  L'app vit dans le tray ; seule « Quitter » (menu tray) appelle `Application.Shutdown` → `OnExit` (unhook + flush +
+  `Dispose` tray). Le `NotifyIcon` est gardé en **référence forte** par `App` (sinon GC → icône fantôme, RG-T06).
+- [DT-021] Import de config (US-P04) via `ConfigImport.TryParse` **pur, sans effet de bord** — distinct de
+  `JsonConfigStore.Load` (dont le backup+défaut silencieux effacerait la config sur fichier invalide). Un fichier
+  illisible/schéma trop récent/en conflit est **refusé** (message inline), jamais appliqué. Application en bloc par
+  `MainViewModel.ApplyImportedConfig` (remplace la config, `AccountsViewModel.LoadPersisted`, autosave).
+- [DT-022] Reflet de l'état suspendu par **info-bulle + case du menu tray** (texte, conforme ui-design « jamais par la
+  seule couleur ») ; une icône grisée distincte est **différée** (un seul `.ico` livré) pour éviter la gestion d'un
+  HICON GDI runtime (surface de bug RG-T06).
+- [DT-023] `AppConfig.StartWithWindows` = **intention persistée** ; le registre `HKCU\...\Run` est réconcilié au
+  démarrage par la composition root (`IStartupRegistryService.SetEnabled(config.StartWithWindows)`) → re-pointe l'exe
+  courant (chemin changé/réinstallation). Service abstrait derrière interface, **fakable** (tests VM sans registre réel).
 
 **Fichiers critiques — ne pas modifier sans discussion :**
 - `src/App/Interop/NativeMethods.cs` (contraintes C-02/C-03).
@@ -109,6 +130,33 @@
 ## Historique des Axes
 
 <!-- Une entrée par Axe complété. Ajoutée par /finalise. -->
+
+### Axe 7 — Tray, cycle de vie & réglages (2026-09-24)
+
+**Périmètre livré :** `TrayIconController` (`NotifyIcon` WinForms : menu Ouvrir · Suspendre/Réactiver (case) ·
+Quitter, double-clic → fenêtre, état suspendu reflété par info-bulle + case) ; cycle de vie
+`OnExplicitShutdown` + « fermer = masquer » (`MainWindow.ForceClose`), sortie via « Quitter » ; onglet Réglages
+(`SettingsViewModel`/`ReglagesView`) : suspension partagée avec le tray, démarrage Windows (`HKCU\...\Run`, off
+par défaut), export/import de config. Couvre US-T01/T02/T04, US-P04, RG-T01..T06.
+
+**Changements structurants :** `MainViewModel` expose `Settings` et gagne les chemins d'écriture
+`SetInterceptionSuspended`/`SetStartWithWindows`/`ApplyImportedConfig` (reste seul writer) ; `RaiseConfigChanged`
+rafraîchit aussi Réglages. Nouveaux services `IStartupRegistryService` (registre `Run`) et `IFileDialogService`
+(dialogues WPF isolés côté Views, ref [DT-014]) ; `Persistence/ConfigImport` (validation pure). `AccountsViewModel`
+gagne `LoadPersisted` (import). Composition root : `OnExplicitShutdown`, réconciliation registre au démarrage, tray
+en référence forte, `Dispose` en `OnExit`. Onglet Réglages câblé dans `MainWindow`.
+
+**Décisions :** [DT-020] `OnExplicitShutdown` + fermer=masquer (lève [DT-012]) ; [DT-021] import pur sans effet de
+bord ; [DT-022] reflet suspension info-bulle+menu (icône grisée différée) ; [DT-023] `StartWithWindows` intention
+persistée, registre réconcilié au démarrage, service fakable.
+
+**Vérifications :** `dotnet build` Debug + Release 0/0 ; `dotnet test` 98/98 (11 nouveaux : round-trip export/import,
+rejet illisible/schéma trop récent/conflit + migration, bascule suspension persistée, démarrage Windows via fake,
+import applique+recharge, import invalide/annulé). `dotnet publish -r win-x64` → `App.exe` single-file (77 Mo).
+
+**Dette technique assumée :** cycle de vie réel (fermer=masquer, « Quitter » libère l'icône sans fantôme) et
+pose/retrait réel de la clé `HKCU\...\Run` non testables unitairement → recette. Icône grisée de suspension différée
+([DT-022]) : reflet actuel par info-bulle + case du menu. Dernier Axe initial → passage en Phase 5 (`/livraison`).
 
 ### Axe 6 — Interception & bascule de focus (cœur) (2026-09-24)
 

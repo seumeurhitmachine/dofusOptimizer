@@ -1,0 +1,158 @@
+<UserControl x:Class="DofusSwitcher.Views.ReglagesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             Background="{StaticResource BackgroundBrush}">
+
+    <!--
+        Onglet Réglages (ui-design.md §Navigation, wireframes/reglages.html). Suspension de l'interception
+        (US-T02), démarrage avec Windows (US-T04), export/import de la config (US-P04), à-propos.
+        [ARCH] Aucune valeur HEX ici : uniquement des brushes de Colors.xaml. Aucune logique métier dans le
+        code-behind (elle vit dans SettingsViewModel).
+    -->
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+
+        <!-- Interrupteur (CheckBox stylée en pilule) — accessible clavier (Espace bascule). -->
+        <Style x:Key="ToggleSwitchStyle" TargetType="CheckBox">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Border x:Name="Track"
+                                Width="38" Height="20" CornerRadius="10"
+                                Background="{StaticResource SurfaceAltBrush}">
+                            <Ellipse x:Name="Knob"
+                                     Width="16" Height="16"
+                                     HorizontalAlignment="Left"
+                                     Margin="2,0,0,0"
+                                     Fill="{StaticResource TextPrimaryBrush}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Track" Property="Background" Value="{StaticResource PrimaryBrush}" />
+                                <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" />
+                                <Setter TargetName="Knob" Property="Margin" Value="0,0,2,0" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Track" Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+                                <Setter TargetName="Track" Property="BorderThickness" Value="1" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Bouton d'action (Exporter/Importer). -->
+        <Style x:Key="ActionButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root"
+                                Background="{StaticResource SurfaceBrush}"
+                                BorderBrush="{StaticResource SurfaceAltBrush}"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{StaticResource SurfaceAltBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Ligne d'option : libellé + sous-titre à gauche, interrupteur à droite. -->
+        <Style x:Key="OptionRowStyle" TargetType="Grid">
+            <Setter Property="Margin" Value="0,0,0,12" />
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="12">
+
+            <!-- Suspendre l'interception (US-T02). -->
+            <Grid Style="{StaticResource OptionRowStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="Suspendre l'interception" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" />
+                    <TextBlock Text="Rend leur comportement natif à toutes les entrées"
+                               FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                </StackPanel>
+                <CheckBox Grid.Column="1"
+                          Style="{StaticResource ToggleSwitchStyle}"
+                          IsChecked="{Binding IsInterceptionSuspended}"
+                          AutomationProperties.Name="Suspendre l'interception" />
+            </Grid>
+
+            <!-- Démarrer avec Windows (US-T04, off par défaut). -->
+            <Grid Style="{StaticResource OptionRowStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="Démarrer avec Windows" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" />
+                    <TextBlock Text="Désactivé par défaut"
+                               FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                </StackPanel>
+                <CheckBox Grid.Column="1"
+                          Style="{StaticResource ToggleSwitchStyle}"
+                          IsChecked="{Binding StartWithWindows}"
+                          AutomationProperties.Name="Démarrer avec Windows" />
+            </Grid>
+
+            <Border Margin="0,4,0,12" BorderBrush="{StaticResource SurfaceAltBrush}" BorderThickness="0,1,0,0" />
+
+            <!-- Export / import de la configuration (US-P04). -->
+            <TextBlock Text="Configuration"
+                       FontSize="13" FontWeight="SemiBold"
+                       Margin="0,0,0,8"
+                       Foreground="{StaticResource TextPrimaryBrush}" />
+            <StackPanel Orientation="Horizontal">
+                <Button Style="{StaticResource ActionButtonStyle}" Content="Exporter…" Command="{Binding ExportCommand}" />
+                <Button Style="{StaticResource ActionButtonStyle}" Content="Importer…" Command="{Binding ImportCommand}" />
+            </StackPanel>
+
+            <!-- Retour visuel export/import (info ou error). -->
+            <TextBlock Text="{Binding StatusMessage}"
+                       FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0"
+                       Visibility="{Binding HasStatus, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Foreground" Value="{StaticResource SuccessBrush}" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsStatusError}" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource ErrorBrush}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+
+            <Border Margin="0,12" BorderBrush="{StaticResource SurfaceAltBrush}" BorderThickness="0,1,0,0" />
+
+            <!-- À propos. -->
+            <TextBlock Text="{Binding AboutText}"
+                       FontSize="11" TextWrapping="Wrap"
+                       Foreground="{StaticResource TextSecondaryBrush}" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

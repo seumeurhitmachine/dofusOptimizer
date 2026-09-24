@@ -1,6 +1,7 @@
 using System.Windows;
 using DofusSwitcher.Persistence;
 using DofusSwitcher.Services;
+using DofusSwitcher.Tray;
 using DofusSwitcher.ViewModels;
 using DofusSwitcher.Views;
 
@@ -21,28 +22,36 @@ public partial class App : Application
     private ConfigAutosaveService? _autosave;
     private IWindowDetector? _windowDetector;
     private IInputHook? _inputHook;
+    // [WARN] Référence forte au tray : sinon le GC collecte le NotifyIcon et l'icône disparaît (RG-T06).
+    private TrayIconController? _tray;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
 
-        // [DECISION] Tant que le tray n'existe pas (Axe 7), fermer la fenêtre DOIT quitter le process :
-        // sinon l'app survit sans UI (process fantôme) et OnExit (unhook WinEvent + flush autosave) ne
-        // s'exécute jamais. L'Axe 7 rétablira OnExplicitShutdown + « fermer = masquer dans le tray ».
-        ShutdownMode = ShutdownMode.OnLastWindowClose;
+        // [DECISION] Axe 7 (lève [DT-012]) : l'app vit dans le tray. Fermer la dernière fenêtre ne quitte
+        // plus le process (RG-T01) — elle est masquée. La sortie réelle passe par « Quitter » du menu tray,
+        // qui appelle Application.Shutdown() (déclenche OnExit : unhook + flush autosave + Dispose tray).
+        ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
         // 1. Persistance : charger la config en tête (fichier absent/corrompu → défaut sans crash).
         IConfigStore configStore = new JsonConfigStore();
         var config = configStore.Load();
 
-        // 2. Services : autosave débouncé + détecteur de fenêtres (instanciés sur le thread UI).
+        // 2. Services : autosave débouncé + détecteur de fenêtres + registre démarrage + dialogues fichier.
         _autosave = new ConfigAutosaveService(configStore);
         _windowDetector = new WindowDetector();
+        IStartupRegistryService startup = new StartupRegistryService();
+        IFileDialogService fileDialog = new FileDialogService();
 
-        // 3. ViewModel racine : reçoit la config, le détecteur et le service de capture (modale WPF) ;
+        // Réconcilie le démarrage Windows avec l'intention persistée : re-pointe l'entrée Run vers l'exe
+        // courant (chemin changé/réinstallation) ou la retire si l'option est off (RG-T05).
+        startup.SetEnabled(config.StartWithWindows);
+
+        // 3. ViewModel racine : reçoit la config, le détecteur et les services (capture, registre, dialogues) ;
         //    le VM Comptes s'abonne dès ici, avant Start, pour capter l'énumération initiale.
         IInputCaptureService inputCapture = new InputCaptureService();
-        var mainViewModel = new MainViewModel(config, _windowDetector, inputCapture);
+        var mainViewModel = new MainViewModel(config, _windowDetector, inputCapture, startup, fileDialog);
         mainViewModel.ConfigChanged += _autosave.Notify;
 
         // 4. Interception & bascule de focus (Axe 6) : décision pure → activation → coordinateur.
@@ -54,8 +63,9 @@ public partial class App : Application
         mainViewModel.ConfigChanged += coordinator.UpdateConfig; // set d'entrées + suspension à jour
         _inputHook = new InputHook(coordinator.Handle);
 
-        // 5. Fenêtre principale.
+        // 5. Fenêtre principale + tray (référence forte gardée par App, archi §Composition root).
         var window = new MainWindow { DataContext = mainViewModel };
+        _tray = new TrayIconController(window, mainViewModel);
         window.Show();
 
         // 6. Détection puis hooks : démarrés après Show() pour que les callbacks OUTOFCONTEXT / bas niveau
@@ -66,9 +76,10 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
-        // Libérer les hooks natifs (souris/clavier puis WinEvent) et flusher l'autosave avant de quitter.
+        // Libérer les hooks natifs (souris/clavier puis WinEvent), le tray (icône, RG-T06) et flusher l'autosave.
         _inputHook?.Dispose();
         _windowDetector?.Dispose();
+        _tray?.Dispose();
         _autosave?.Dispose();
         base.OnExit(e);
     }

@@ -154,7 +154,7 @@ internal static unsafe partial class NativeMethods
     /// (cible <c>[UnmanagedCallersOnly]</c>) : [LibraryImport] ne marshale pas les délégués (SYSLIB1051).
     /// [WARN] Le callback DOIT être court (RG-S06, &lt; 100 ms) sinon Windows le contourne (LowLevelHooksTimeout).
     /// </summary>
-    [LibraryImport("user32.dll", SetLastError = true)]
+    [LibraryImport("user32.dll", EntryPoint = "SetWindowsHookExW", SetLastError = true)]
     internal static partial nint SetWindowsHookEx(
         int idHook,
         delegate* unmanaged[Stdcall]<int, nint, nint, nint> lpfn,

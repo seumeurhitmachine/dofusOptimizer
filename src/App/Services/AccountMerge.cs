@@ -41,7 +41,8 @@ public static class AccountMerge
                 account.CharacterName,
                 isConnected,
                 account.Excluded,
-                isConnected ? window.Handle : 0));
+                isConnected ? window.Handle : 0,
+                account.AccountName));
             placed.Add(account.CharacterName);
         }
 

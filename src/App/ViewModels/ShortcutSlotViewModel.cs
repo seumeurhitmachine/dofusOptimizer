@@ -15,17 +15,27 @@ public sealed class ShortcutSlotViewModel : ObservableObject
 {
     private Binding? _binding;
     private string? _conflictMessage;
+    private string _label;
 
     /// <summary>Crée un slot. <paramref name="capture"/>/<paramref name="clear"/> sont fournis par le VM parent.</summary>
-    public ShortcutSlotViewModel(string label, Action capture, Action clear)
+    /// <param name="id">Identité stable pour la réconciliation (nom de personnage pour un slot direct), ou <c>null</c>.</param>
+    public ShortcutSlotViewModel(string label, Action capture, Action clear, string? id = null)
     {
-        Label = label;
+        _label = label;
+        Id = id;
         CaptureCommand = new RelayCommand(capture);
         ClearCommand = new RelayCommand(clear, () => HasBinding);
     }
 
-    /// <summary>Libellé de l'action (« Compte suivant » ou nom de personnage pour l'activation directe).</summary>
-    public string Label { get; }
+    /// <summary>Identité stable du slot (nom de personnage pour l'activation directe) ; <c>null</c> pour suivant/précédent.</summary>
+    public string? Id { get; }
+
+    /// <summary>Libellé affiché (« Compte suivant » ou nom du compte pour l'activation directe). Mutable : suit un re-rattachement.</summary>
+    public string Label
+    {
+        get => _label;
+        set => SetProperty(ref _label, value);
+    }
 
     /// <summary>Entrée courante affichée (« XButton2 », « F1 »…) ou « non assignée ».</summary>
     public string Display => _binding is null ? "non assignée" : InputCapture.Format(_binding);

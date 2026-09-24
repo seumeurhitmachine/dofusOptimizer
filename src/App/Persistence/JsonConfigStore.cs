@@ -66,12 +66,18 @@ public sealed class JsonConfigStore : IConfigStore
     }
 
     /// <summary>
-    /// Migration montante idempotente. Un seul schéma existe (v1) : la fonction se contente de
-    /// normaliser la version. Les évolutions futures ajouteront ici leurs transformations
-    /// (par plage de version), en incrémentant <see cref="AppConfig.CurrentSchemaVersion"/>.
+    /// Migration montante idempotente, partagée avec l'import (<see cref="ConfigImport"/>).
+    /// v1→v2 : ajout des comptes (<see cref="AppConfig.GameAccounts"/>) et du lien
+    /// <see cref="AccountConfig.AccountName"/>. Une config v1 n'a pas le champ <c>gameAccounts</c>
+    /// (désérialisé <c>null</c>) → normalisé en liste vide ; les personnages restent non liés
+    /// (<c>accountName = null</c>). Les évolutions futures ajouteront ici leurs transformations.
     /// </summary>
-    private static AppConfig Migrate(AppConfig config) =>
-        config with { SchemaVersion = AppConfig.CurrentSchemaVersion };
+    internal static AppConfig Migrate(AppConfig config) =>
+        config with
+        {
+            SchemaVersion = AppConfig.CurrentSchemaVersion,
+            GameAccounts = config.GameAccounts ?? [],
+        };
 
     /// <summary>
     /// Copie best-effort du fichier fautif en <c>*.corrupt-&lt;horodatage&gt;</c> avant de repartir

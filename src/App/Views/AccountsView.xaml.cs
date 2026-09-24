@@ -1,13 +1,8 @@
 using DofusSwitcher.ViewModels;
 
-// [WARN] UseWPF + UseWindowsForms exposent des types homonymes (UserControl, Point, MouseEventArgs,
-// DragEventArgs, DragDrop…). Alias explicites en faveur de WPF pour tout ce fichier.
+// [WARN] UseWPF + UseWindowsForms exposent des types homonymes. Alias explicites en faveur de WPF.
 using UserControl = System.Windows.Controls.UserControl;
-using ListBox = System.Windows.Controls.ListBox;
-using ListBoxItem = System.Windows.Controls.ListBoxItem;
-using FilterEventArgs = System.Windows.Data.FilterEventArgs;
 using FrameworkElement = System.Windows.FrameworkElement;
-using DependencyObject = System.Windows.DependencyObject;
 using Point = System.Windows.Point;
 using MouseButtonEventArgs = System.Windows.Input.MouseButtonEventArgs;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
@@ -16,21 +11,19 @@ using DragEventArgs = System.Windows.DragEventArgs;
 using DragDrop = System.Windows.DragDrop;
 using DragDropEffects = System.Windows.DragDropEffects;
 using SystemParameters = System.Windows.SystemParameters;
-using VisualTreeHelper = System.Windows.Media.VisualTreeHelper;
 
 namespace DofusSwitcher.Views;
 
 /// <summary>
-/// Vue de l'onglet Comptes.
-/// [ARCH] Code-behind volontairement limité au glisser-déposer : c'est un concern purement vue (hit-
-/// test visuel) qui n'a pas sa place dans le ViewModel. Le réordonnancement effectif passe par
-/// <see cref="AccountsViewModel.MoveItem"/> — chemin unique de mutation (archi §MVVM). Le DataContext
-/// (AccountsViewModel) est fourni par le binding depuis MainWindow.
+/// Vue de l'onglet Comptes (v2) : 3 zones pilotées par databinding. Le seul code-behind est le
+/// glisser-déposer de réordonnancement de la <b>zone 1</b> (comptes connectés) — concern purement vue
+/// (hit-test), qui réordonne l'ordre de rotation via <see cref="AccountsViewModel.MoveItem"/> (chemin
+/// unique de mutation). La position est persistée même pour les personnages absents.
 /// </summary>
 public partial class AccountsView : UserControl
 {
-    private Point _dragStartPoint;
-    private AccountItemViewModel? _draggedItem;
+    private Point _dragStart;
+    private AccountItemViewModel? _dragged;
 
     public AccountsView()
     {
@@ -39,56 +32,34 @@ public partial class AccountsView : UserControl
 
     private void Handle_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        _dragStartPoint = e.GetPosition(null);
-        _draggedItem = (sender as FrameworkElement)?.DataContext as AccountItemViewModel;
+        _dragStart = e.GetPosition(null);
+        _dragged = ((sender as FrameworkElement)?.DataContext as ConnectedAccountViewModel)?.Character;
     }
 
     private void Handle_PreviewMouseMove(object sender, MouseEventArgs e)
     {
-        if (e.LeftButton != MouseButtonState.Pressed || _draggedItem is null) return;
+        if (e.LeftButton != MouseButtonState.Pressed || _dragged is null) return;
 
         // Ne démarrer le drag qu'au-delà du seuil système (évite les faux déplacements au clic).
-        var diff = _dragStartPoint - e.GetPosition(null);
+        var diff = _dragStart - e.GetPosition(null);
         if (Math.Abs(diff.X) < SystemParameters.MinimumHorizontalDragDistance &&
             Math.Abs(diff.Y) < SystemParameters.MinimumVerticalDragDistance)
             return;
 
         if (sender is FrameworkElement element)
-            DragDrop.DoDragDrop(element, _draggedItem, DragDropEffects.Move);
+            DragDrop.DoDragDrop(element, _dragged, DragDropEffects.Move);
 
-        _draggedItem = null;
+        _dragged = null;
     }
 
-    private void AccountsList_Drop(object sender, DragEventArgs e)
+    private void Row_Drop(object sender, DragEventArgs e)
     {
-        if (_draggedItem is null || DataContext is not AccountsViewModel vm || sender is not ListBox list) return;
+        if (_dragged is null || DataContext is not AccountsViewModel vm) return;
+        if ((sender as FrameworkElement)?.DataContext is not ConnectedAccountViewModel target) return;
 
-        var from = vm.Items.IndexOf(_draggedItem);
-
-        // Cible = compte survolé au lâcher (dans la liste réceptrice) ; à défaut, fin de liste.
-        var target = FindAncestor<ListBoxItem>(list.InputHitTest(e.GetPosition(list)) as DependencyObject);
-        var to = target?.DataContext is AccountItemViewModel dropOn
-            ? vm.Items.IndexOf(dropOn)
-            : vm.Items.Count - 1;
-
+        var from = vm.Items.IndexOf(_dragged);
+        var to = vm.Items.IndexOf(target.Character);
         if (from >= 0 && to >= 0) vm.MoveItem(from, to);
-        _draggedItem = null;
-    }
-
-    // Filtres des deux vues : partitionnent Items en connectés (liste du haut) / déconnectés (bas).
-    private void Connected_Filter(object sender, FilterEventArgs e)
-        => e.Accepted = e.Item is AccountItemViewModel { IsConnected: true };
-
-    private void Disconnected_Filter(object sender, FilterEventArgs e)
-        => e.Accepted = e.Item is AccountItemViewModel { IsConnected: false };
-
-    private static T? FindAncestor<T>(DependencyObject? current) where T : DependencyObject
-    {
-        while (current is not null)
-        {
-            if (current is T match) return match;
-            current = VisualTreeHelper.GetParent(current);
-        }
-        return null;
+        _dragged = null;
     }
 }

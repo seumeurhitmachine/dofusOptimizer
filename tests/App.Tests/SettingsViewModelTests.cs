@@ -103,8 +103,8 @@ public class SettingsViewModelTests
             Assert.False(vm.Settings.IsStatusError);
             Assert.Equal(KeyA, vm.Config.NextBinding);
             Assert.Equal(2, vm.Config.Accounts.Count);
-            Assert.Equal(2, vm.Accounts.Items.Count);      // comptes rechargés
-            Assert.Equal(2, vm.Shortcuts.DirectSlots.Count); // raccourcis directs réalignés
+            Assert.Equal(2, vm.Accounts.Items.Count);      // personnages rechargés
+            Assert.Empty(vm.Shortcuts.DirectSlots);        // personnages importés non liés → aucun slot direct (Axe 8)
             Assert.NotEmpty(emitted);                        // persisté (autosave)
         }
         finally

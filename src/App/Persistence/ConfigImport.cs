@@ -44,9 +44,10 @@ public static class ConfigImport
             return false;
         }
 
-        // Schéma antérieur → migration montante idempotente (même règle que le chargement normal).
+        // Schéma antérieur → migration montante idempotente (même fonction que le chargement normal :
+        // normalise la version ET les nouveaux champs, ex. gameAccounts absent en v1).
         if (parsed.SchemaVersion < AppConfig.CurrentSchemaVersion)
-            parsed = parsed with { SchemaVersion = AppConfig.CurrentSchemaVersion };
+            parsed = JsonConfigStore.Migrate(parsed);
 
         // L'invariant d'unicité globale des entrées doit être préservé (data-model §Invariants) : une
         // config importée en conflit corromprait l'état — on refuse plutôt que d'appliquer.

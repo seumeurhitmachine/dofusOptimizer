@@ -13,6 +13,7 @@ public sealed class AccountItemViewModel : ObservableObject
     private bool _isExcluded;
     private nint _handle;
     private int _number;
+    private string? _accountName;
 
     /// <summary>Crée l'item à partir d'un état de fusion.</summary>
     public AccountItemViewModel(AccountRuntimeState state)
@@ -56,6 +57,13 @@ public sealed class AccountItemViewModel : ObservableObject
         set => SetProperty(ref _number, value);
     }
 
+    /// <summary>Nom du compte lié (v2), ou <c>null</c> si non lié. Pilote la répartition en 3 zones.</summary>
+    public string? AccountName
+    {
+        get => _accountName;
+        private set => SetProperty(ref _accountName, value);
+    }
+
     /// <summary>
     /// Met à jour l'état runtime depuis une nouvelle fusion. Le nom (clé) doit correspondre :
     /// l'appelant réconcilie par <see cref="CharacterName"/>.
@@ -65,5 +73,6 @@ public sealed class AccountItemViewModel : ObservableObject
         IsConnected = state.IsConnected;
         IsExcluded = state.IsExcluded;
         Handle = state.Handle;
+        AccountName = state.AccountName;
     }
 }

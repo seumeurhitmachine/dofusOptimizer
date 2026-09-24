@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Reflection;
 using DofusSwitcher.Constants;
@@ -21,12 +22,18 @@ public sealed class SettingsViewModel : ObservableObject
     private readonly Action<bool> _applySuspended;
     private readonly Action<bool> _applyStartWithWindows;
     private readonly Action<AppConfig> _applyImported;
+    private readonly Func<string, string?> _addAccount;
+    private readonly Action<string> _deleteAccount;
+    private readonly Action<string> _deleteCharacter;
+    private System.Windows.Threading.DispatcherTimer? _accountErrorTimer;
 
     private AppConfig _config;
     private bool _isInterceptionSuspended;
     private bool _startWithWindows;
     private string? _statusMessage;
     private bool _isStatusError;
+    private string _newAccountName = string.Empty;
+    private string? _accountError;
 
     /// <summary>Câble le VM sur la config, les services système et les chemins d'application (MainViewModel).</summary>
     public SettingsViewModel(
@@ -35,7 +42,10 @@ public sealed class SettingsViewModel : ObservableObject
         IFileDialogService fileDialog,
         Action<bool> applySuspended,
         Action<bool> applyStartWithWindows,
-        Action<AppConfig> applyImported)
+        Action<AppConfig> applyImported,
+        Func<string, string?> addAccount,
+        Action<string> deleteAccount,
+        Action<string> deleteCharacter)
     {
         _config = config;
         _startup = startup;
@@ -43,6 +53,9 @@ public sealed class SettingsViewModel : ObservableObject
         _applySuspended = applySuspended;
         _applyStartWithWindows = applyStartWithWindows;
         _applyImported = applyImported;
+        _addAccount = addAccount;
+        _deleteAccount = deleteAccount;
+        _deleteCharacter = deleteCharacter;
 
         // [DECISION] État initial lu depuis la config (intention persistée). La réconciliation du registre
         // au chemin de l'exe courant est faite une fois par la composition root au démarrage.
@@ -51,6 +64,8 @@ public sealed class SettingsViewModel : ObservableObject
 
         ExportCommand = new RelayCommand(Export);
         ImportCommand = new RelayCommand(Import);
+        CreateAccountCommand = new RelayCommand(CreateAccount);
+        RebuildAccountRows();
     }
 
     /// <summary>
@@ -101,6 +116,72 @@ public sealed class SettingsViewModel : ObservableObject
     /// <summary>Importe une configuration depuis un fichier, après validation (US-P04, RG-P07).</summary>
     public RelayCommand ImportCommand { get; }
 
+    /// <summary>Comptes déclarés (Axe 8) — lignes avec renommage et suppression (cascade).</summary>
+    public ObservableCollection<GameAccountRowViewModel> GameAccounts { get; } = [];
+
+    /// <summary>Nom saisi pour créer un nouveau compte (US-C01).</summary>
+    public string NewAccountName
+    {
+        get => _newAccountName;
+        set => SetProperty(ref _newAccountName, value);
+    }
+
+    /// <summary>Message d'erreur de création de compte (nom invalide ou déjà pris), <c>null</c> si aucun.</summary>
+    public string? AccountError
+    {
+        get => _accountError;
+        private set { if (SetProperty(ref _accountError, value)) OnPropertyChanged(nameof(HasAccountError)); }
+    }
+
+    /// <summary>Vrai s'il y a une erreur de création de compte à afficher.</summary>
+    public bool HasAccountError => !string.IsNullOrEmpty(_accountError);
+
+    /// <summary>Crée un compte à partir de <see cref="NewAccountName"/> (US-C01).</summary>
+    public RelayCommand CreateAccountCommand { get; }
+
+    private void CreateAccount()
+    {
+        var error = _addAccount(NewAccountName);
+        SetAccountError(error);
+        if (error is null) NewAccountName = string.Empty; // succès : les lignes se rafraîchissent via OnConfigChanged
+    }
+
+    /// <summary>
+    /// Affecte le message d'erreur de création et arme un effacement automatique après 10 s (recette).
+    /// [DECISION] Minuterie UI (auto-dismiss) via <c>DispatcherTimer</c> — seul point où ce VM touche au
+    /// timing d'affichage ; créée à la demande (les tests headless ne la font jamais tiquer).
+    /// </summary>
+    private void SetAccountError(string? error)
+    {
+        AccountError = error;
+        _accountErrorTimer?.Stop();
+        if (error is null) return;
+
+        _accountErrorTimer ??= CreateAccountErrorTimer();
+        _accountErrorTimer.Start();
+    }
+
+    private System.Windows.Threading.DispatcherTimer CreateAccountErrorTimer()
+    {
+        var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(10) };
+        timer.Tick += (_, _) => { timer.Stop(); AccountError = null; };
+        return timer;
+    }
+
+    /// <summary>Reconstruit les lignes de comptes (nom + personnages liés) depuis la config courante.</summary>
+    private void RebuildAccountRows()
+    {
+        GameAccounts.Clear();
+        foreach (var account in _config.GameAccounts)
+        {
+            var linked = _config.Accounts
+                .Where(c => c.AccountName is not null && string.Equals(c.AccountName, account.Name, StringComparison.OrdinalIgnoreCase))
+                .Select(c => c.CharacterName)
+                .ToList();
+            GameAccounts.Add(new GameAccountRowViewModel(account.Name, linked, _deleteAccount, _deleteCharacter));
+        }
+    }
+
     /// <summary>
     /// Réaligne l'affichage sur une nouvelle config (après import ou toute autre persistance). Appelé par le
     /// <see cref="MainViewModel"/>. Ne repasse pas par les setters publics (pas de ré-application/boucle) ;
@@ -112,6 +193,7 @@ public sealed class SettingsViewModel : ObservableObject
         SetProperty(ref _isInterceptionSuspended, config.InterceptionSuspended, nameof(IsInterceptionSuspended));
         if (SetProperty(ref _startWithWindows, config.StartWithWindows, nameof(StartWithWindows)))
             _startup.SetEnabled(config.StartWithWindows);
+        RebuildAccountRows();
     }
 
     private void Export()

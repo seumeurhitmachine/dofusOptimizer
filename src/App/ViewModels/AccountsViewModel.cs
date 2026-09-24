@@ -24,15 +24,20 @@ public sealed class AccountsViewModel : ObservableObject
 {
     private readonly Dictionary<string, DetectedWindow> _detected = new(StringComparer.Ordinal);
     private List<AccountConfig> _persisted;
+    private List<GameAccount> _gameAccounts;
     private AccountItemViewModel? _selectedItem;
 
     /// <summary>
     /// Câble le VM sur les comptes persistés et le détecteur. L'abonnement précède <see cref="IWindowDetector.Start"/>
     /// (composition root) pour capter l'énumération initiale.
     /// </summary>
-    public AccountsViewModel(IReadOnlyList<AccountConfig> persisted, IWindowDetector detector)
+    public AccountsViewModel(
+        IReadOnlyList<AccountConfig> persisted,
+        IWindowDetector detector,
+        IReadOnlyList<GameAccount>? gameAccounts = null)
     {
         _persisted = [.. persisted];
+        _gameAccounts = [.. gameAccounts ?? []];
         MoveUpCommand = new RelayCommand(() => MoveSelected(-1), () => CanMoveSelected(-1));
         MoveDownCommand = new RelayCommand(() => MoveSelected(+1), () => CanMoveSelected(+1));
         ToggleExcludeCommand = new RelayCommand(ToggleExcludeSelected, () => SelectedItem is not null);
@@ -43,6 +48,25 @@ public sealed class AccountsViewModel : ObservableObject
         Rebuild(); // état initial : comptes persistés, tous absents tant que rien n'est détecté.
     }
 
+    /// <summary>Zone 1 — comptes ayant un personnage lié actuellement connecté (compte + personnage).</summary>
+    public ObservableCollection<ConnectedAccountViewModel> ConnectedAccounts { get; } = [];
+
+    /// <summary>Zone 2 — personnages connectés non rattachés à un compte (avec action de liaison).</summary>
+    public ObservableCollection<UnlinkedCharacterViewModel> UnlinkedConnected { get; } = [];
+
+    /// <summary>Zone 3 — noms des comptes ayant des personnages liés mais aucun connecté (nom seul).</summary>
+    public ObservableCollection<string> DisconnectedAccounts { get; } = [];
+
+    /// <summary>Comptes disponibles pour la liaison (sans personnage lié connecté, RG-C03) — partagée par les lignes de zone 2.</summary>
+    public ObservableCollection<string> AvailableAccounts { get; } = [];
+
+    /// <summary>Émis après recomposition des zones (changement d'état runtime) — l'onglet Raccourcis rafraîchit ses libellés.</summary>
+    public event Action? RuntimeChanged;
+
+    /// <summary>Nom du personnage lié actuellement connecté pour un compte donné, ou <c>null</c> si aucun (activation directe, Axe 8).</summary>
+    public string? ConnectedCharacterOf(string accountName) =>
+        ConnectedAccounts.FirstOrDefault(c => string.Equals(c.AccountName, accountName, StringComparison.OrdinalIgnoreCase))?.Character.CharacterName;
+
     /// <summary>Comptes affichés, ordonnés (ordre persistant puis détectés non persistés en fin).</summary>
     public ObservableCollection<AccountItemViewModel> Items { get; } = [];
 
@@ -51,6 +75,15 @@ public sealed class AccountsViewModel : ObservableObject
 
     /// <summary>Inverse de <see cref="IsEmpty"/> : pilote la visibilité de la liste (converter in-box, sans inversion).</summary>
     public bool HasItems => Items.Count > 0;
+
+    /// <summary>Zone 1 non vide (au moins un compte connecté) — pilote la visibilité de la section.</summary>
+    public bool HasConnected => ConnectedAccounts.Count > 0;
+
+    /// <summary>Zone 2 non vide (au moins un personnage connecté sans compte).</summary>
+    public bool HasUnlinked => UnlinkedConnected.Count > 0;
+
+    /// <summary>Zone 3 non vide (au moins un compte déconnecté à personnages liés).</summary>
+    public bool HasDisconnected => DisconnectedAccounts.Count > 0;
 
     /// <summary>Compte sélectionné dans la liste — cible des commandes ↑/↓/exclure (lié à la ListBox).</summary>
     public AccountItemViewModel? SelectedItem
@@ -181,7 +214,7 @@ public sealed class AccountsViewModel : ObservableObject
         foreach (var item in Items)
         {
             existingByName.TryGetValue(item.CharacterName, out var existing);
-            rebuilt.Add(new AccountConfig(item.CharacterName, item.IsExcluded, existing?.DirectBinding));
+            rebuilt.Add(new AccountConfig(item.CharacterName, item.IsExcluded, existing?.DirectBinding, existing?.AccountName));
         }
         _persisted = rebuilt;
     }
@@ -224,9 +257,75 @@ public sealed class AccountsViewModel : ObservableObject
         for (var i = 0; i < Items.Count; i++)
             Items[i].Number = i + 1;
 
+        RebuildZones();
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(HasItems));
         RaiseCommandStates();
+    }
+
+    /// <summary>
+    /// Recompose les 3 zones (comptes-v2 §2.6) et la liste des comptes disponibles à partir de l'état
+    /// runtime courant (<see cref="Items"/>) et des comptes déclarés. Reconstruction complète : les
+    /// collections sont petites (nombre de clients/comptes) et les changements peu fréquents.
+    /// </summary>
+    private void RebuildZones()
+    {
+        var states = Items
+            .Select(i => new AccountRuntimeState(i.CharacterName, i.IsConnected, i.IsExcluded, i.Handle, i.AccountName))
+            .ToList();
+        var zones = AccountZones.Build(_gameAccounts, states);
+
+        // Comptes disponibles : mis à jour en place (référence partagée par les lignes de zone 2).
+        AvailableAccounts.Clear();
+        foreach (var name in zones.AvailableAccounts) AvailableAccounts.Add(name);
+
+        // Zone 1 ordonnée par ordre de rotation (ordre de Items), pas par ordre de déclaration des comptes.
+        var connectedByChar = zones.Connected.ToDictionary(z => z.ConnectedCharacter, StringComparer.Ordinal);
+        ConnectedAccounts.Clear();
+        foreach (var item in Items)
+            if (connectedByChar.TryGetValue(item.CharacterName, out var z))
+                ConnectedAccounts.Add(new ConnectedAccountViewModel(z.AccountName, item));
+
+        UnlinkedConnected.Clear();
+        foreach (var name in zones.UnlinkedConnected)
+        {
+            var character = Items.FirstOrDefault(i => i.CharacterName == name);
+            if (character is not null)
+                UnlinkedConnected.Add(new UnlinkedCharacterViewModel(character, AvailableAccounts, LinkCharacter));
+        }
+
+        DisconnectedAccounts.Clear();
+        foreach (var z in zones.Disconnected)
+            DisconnectedAccounts.Add(z.AccountName);
+
+        OnPropertyChanged(nameof(HasConnected));
+        OnPropertyChanged(nameof(HasUnlinked));
+        OnPropertyChanged(nameof(HasDisconnected));
+        RuntimeChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Remplace la liste des comptes déclarés (après CRUD via le <see cref="MainViewModel"/>) et recompose
+    /// les zones. Ne touche pas aux personnages : seul l'affichage des zones dépend des comptes.
+    /// </summary>
+    public void LoadGameAccounts(IReadOnlyList<GameAccount> gameAccounts)
+    {
+        _gameAccounts = [.. gameAccounts];
+        RebuildZones();
+    }
+
+    /// <summary>
+    /// Lie (ou délie si <paramref name="accountName"/> vaut <c>null</c>) un personnage à un compte — chemin
+    /// unique de mutation du lien. Matérialise l'ordre visible (comme <see cref="SetDirectBinding"/>, ref
+    /// [DT-013]) puis émet <see cref="AccountsChanged"/>. Sans personnage correspondant : no-op.
+    /// </summary>
+    public void LinkCharacter(string characterName, string? accountName)
+    {
+        MaterializeFromItems();
+        var index = _persisted.FindIndex(a => a.CharacterName == characterName);
+        if (index < 0) return;
+        _persisted[index] = _persisted[index] with { AccountName = accountName };
+        RebuildAndPersist();
     }
 
     private void RaiseCommandStates()

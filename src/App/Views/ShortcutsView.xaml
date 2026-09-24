@@ -134,7 +134,7 @@
                           ItemTemplate="{StaticResource SlotTemplate}"
                           Visibility="{Binding HasDirectSlots, Converter={StaticResource BoolToVisibility}}" />
 
-            <TextBlock Text="Aucun compte enregistré. Les comptes apparaissent après une action sur l'onglet Comptes (réordonner/exclure)."
+            <TextBlock Text="Aucun personnage lié à un compte. Liez un personnage à un compte dans l'onglet Comptes pour l'activer directement."
                        TextWrapping="Wrap"
                        FontSize="11"
                        Foreground="{StaticResource TextSecondaryBrush}">

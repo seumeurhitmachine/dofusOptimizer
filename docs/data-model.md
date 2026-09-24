@@ -17,12 +17,18 @@
 
 ## Diagramme ERD (structure logique du JSON)
 
+> **Terminologie (v2)** : `AccountConfig` modélise un **personnage** (nom de type historique v1,
+> conservé pour la compat JSON `accounts`). L'entité **compte** est `GameAccount`. Le lien
+> personnage→compte est le champ nullable `accountName`.
+
 ```mermaid
 erDiagram
-    AppConfig ||--o{ AccountConfig : "accounts (liste ORDONNÉE)"
+    AppConfig ||--o{ AccountConfig : "accounts (personnages, liste ORDONNÉE)"
+    AppConfig ||--o{ GameAccount : "gameAccounts (comptes)"
     AppConfig ||--o| Binding : "nextBinding"
     AppConfig ||--o| Binding : "prevBinding"
     AccountConfig ||--o| Binding : "directBinding"
+    GameAccount ||--o{ AccountConfig : "accountName (0..N personnages liés)"
 
     AppConfig {
         int    schemaVersion
@@ -30,12 +36,18 @@ erDiagram
         bool   startWithWindows
         Binding nextBinding "nullable"
         Binding prevBinding "nullable"
-        AccountConfig[] accounts "ordre = rotation"
+        AccountConfig[] accounts "personnages, ordre = rotation"
+        GameAccount[]   gameAccounts "comptes"
     }
     AccountConfig {
-        string  characterName "clé naturelle"
+        string  characterName "clé naturelle (personnage)"
         bool    excluded
         Binding directBinding "nullable"
+        string  accountName "nullable — lien vers GameAccount.name"
+    }
+    GameAccount {
+        string name "clé naturelle, 1..40 alphanum/espace/tiret, unique"
+        Binding directBinding "nullable — activation directe du compte"
     }
     Binding {
         string kind "Key | MouseButton"
@@ -70,16 +82,30 @@ partout où il apparaît.
 - `interceptionSuspended = true` ⇒ le hook transmet toujours nativement (RG-T03) ;
   état persistant.
 
-### AccountConfig
+### AccountConfig (personnage)
 
 - `characterName` **non vide et unique** dans `accounts` : c'est la **clé
   naturelle** (identité stable), cohérente avec la détection par titre (RG-D01) et
   la conservation hors ligne (EP-03).
-- Un compte est **conservé même absent** : la présence en config est indépendante
+- Un personnage est **conservé même absent** : la présence en config est indépendante
   de l'existence d'une fenêtre (état `connecté/absent` calculé au runtime, **non
   persisté**).
 - `excluded = true` ⇒ retiré de la rotation mais conservé et réactivable (EF-09).
 - `directBinding` optionnel ; s'il est présent, soumis à l'unicité globale.
+- `accountName` optionnel : nom d'un `GameAccount` existant (RG-C02) ou `null` (non lié).
+  Lien établi **manuellement** (RG-C06). Ne remet pas en cause l'ordre de rotation (RG-C05).
+
+### GameAccount (compte)
+
+- `name` **non vide, ≤ 40, `^[A-Za-z0-9 -]$`** après `Trim`, **unique** dans `gameAccounts`
+  (comparaison **insensible à la casse**) — RG-C01.
+- Regroupe **0..N** personnages via `AccountConfig.accountName` ; au plus **un** personnage
+  lié connecté à la fois (RG-C02/C03).
+- `directBinding` optionnel : activation directe **portée par le compte** (Axe 8). À l'appui, active le
+  personnage lié **actuellement connecté** du compte (résolu au runtime). Soumis à l'unicité globale.
+- **Aucun** état runtime : « compte connecté » = a un personnage lié actuellement détecté.
+- Supprimer un compte **supprime** les personnages liés (leurs `AccountConfig`), sans
+  confirmation (RG-C04) ; un personnage lié encore connecté réapparaît non lié (runtime).
 
 ### Binding
 
@@ -122,3 +148,4 @@ partout où il apparaît.
 | pré-Axe 1 | 2026-09-24 | Création initiale (schemaVersion 1) |
 | Axe 2 | 2026-09-24 | Matérialisation du schéma en code (`Binding`/`AccountConfig`/`AppConfig`, `AppJsonContext`, `JsonConfigStore`). Aucun champ modifié : schemaVersion reste 1. Invariant d'unicité globale porté par `AppConfig.HasBindingConflicts()`. |
 | Axe 5 | 2026-09-24 | Encodage `Binding.Code` pour `MouseButton` étendu à toute la souris (gauche=3, droit=4, milieu=5 ; XButton1/2=1/2 inchangés). Aucun champ ni schemaVersion modifié (valeurs de `code` élargies). Encodage/formatage centralisés dans `InputCapture`. |
+| Axe 8 | 2026-09-24 | **schemaVersion 1 → 2**. Nouvelle entité `GameAccount` (compte) dans `appConfig.gameAccounts` ; lien nullable `accountConfig.accountName` (personnage→compte). Migration montante additive (v1 sans `gameAccounts` → liste vide, personnages non liés). Terminologie clarifiée : `AccountConfig` = personnage. |

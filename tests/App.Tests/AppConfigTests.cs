@@ -63,7 +63,8 @@ public class AppConfigTests
             [
                 new AccountConfig("Iop", DirectBinding: shared),
                 new AccountConfig("Cra", DirectBinding: shared),
-            ]);
+            ],
+            GameAccounts: []);
 
         Assert.True(config.HasBindingConflicts());
     }

@@ -1,11 +1,16 @@
-# Project State — Dofus Window Switcher
+# Project State — Dofus Optimizer
 
 ## État courant
 
 > Mettre à jour à chaque /finalise. Max 30 lignes.
 
-**Dernier Axe complété :** Axe 7 — Tray, cycle de vie & réglages — 2026-09-24
-**Phase :** Axes initiaux **terminés** (Axe 7 = dernier Axe livré) → Phase 5 Livraison (`/livraison`)
+**Dernier Axe complété :** Axe 8 — Comptes ↔ Personnages — 2026-09-24
+**Phase :** **Phase 6 — Évolution**. v1.0.0 **livrée** (tag `1.0.0`, `CHANGELOG.md`, `README.md`).
+Axe 8 livré (spec `docs/specs/comptes-v2.md`). Pas d'Axe planifié au-delà (plan-axes = Axes 1→7).
+**Post-v1.0.0 (hors Axe, mergé sur `main`) :** application renommée **« Dofus Optimizer »** ;
+polish UI onglet Comptes, onglets pleine largeur, icône poubelle Raccourcis.
+⚠️ Terminologie : `AccountConfig` (code) = **personnage** (clé = nom de fenêtre) ; l'entité **compte**
+est `GameAccount` (nom historique conservé pour la compat JSON `accounts`, ref [DT-024]).
 
 **Fonctionnalités actives :**
 - (aucune US — socle infra) Solution `.slnx` + `src/App` (WPF) + `tests/App.Tests` (xUnit).
@@ -46,6 +51,16 @@
   Windows (`IStartupRegistryService` → `HKCU\...\Run`, off par défaut, réconcilié au démarrage), export/import config
   (`IFileDialogService` + `ConfigImport` pur pour valider sans effet de bord ; import → `MainViewModel.ApplyImportedConfig`
   recharge comptes/raccourcis + autosave). `AccountsViewModel.LoadPersisted` pour le rechargement à l'import.
+
+- **Comptes ↔ Personnages (Axe 8, comptes-v2)** : entité `GameAccount` (nom `^[A-Za-z0-9 -]{1,40}$`, unique
+  insensible casse) + lien nullable `AccountConfig.AccountName` ; `schemaVersion 2` (migration additive v1→v2
+  partagée `JsonConfigStore.Migrate`, réutilisée par l'import). Partition **pure** en 3 zones (`AccountZones`) :
+  comptes connectés / personnages connectés sans compte (liaison au compte disponible, RG-C03) / comptes
+  déconnectés. Onglet Comptes réécrit (3 zones, DnD **zone 1 seule** = ordre de rotation persisté ; nom perso en
+  titre, compte en sous-titre). CRUD comptes dans Réglages (créer + supprimer cascade RG-C04 + liste dépliable des
+  personnages liés avec suppression) — pas de renommage. Activation directe **portée par le compte**
+  (`GameAccount.DirectBinding`), libellée par le personnage connecté (résolu runtime, `BuildRotationSnapshot`).
+  Barre de défilement sombre globale (`Themes/Controls.xaml`).
 
 **Contraintes techniques actives :**
 - .NET 10 + WPF, MVVM manuel, **zéro NuGet** dans l'app, publish single-file self-contained.
@@ -119,6 +134,16 @@
 - [DT-023] `AppConfig.StartWithWindows` = **intention persistée** ; le registre `HKCU\...\Run` est réconcilié au
   démarrage par la composition root (`IStartupRegistryService.SetEnabled(config.StartWithWindows)`) → re-pointe l'exe
   courant (chemin changé/réinstallation). Service abstrait derrière interface, **fakable** (tests VM sans registre réel).
+- [DT-024] (Axe 8) `AccountConfig` = **personnage** (nom de type historique conservé pour la compat JSON `accounts` et
+  éviter un renommage massif) ; l'entité **compte** est `GameAccount` (nouveau) + lien nullable `AccountConfig.AccountName`.
+  `schemaVersion 2`, migration montante additive (`gameAccounts` absent → vide, personnages non liés).
+- [DT-025] (Axe 8) Activation directe **portée par le compte** (`GameAccount.DirectBinding`), pas le personnage : à l'appui,
+  le personnage lié **connecté** du compte est activé (`BuildRotationSnapshot`). Le libellé du slot suit le personnage
+  connecté (runtime) via `AccountsViewModel.RuntimeChanged` → `ShortcutsViewModel.OnRuntimeChanged`. Slots réconciliés par
+  `Id` = nom de compte (identité stable). Le champ legacy `AccountConfig.DirectBinding` reste dans l'unicité globale (compat).
+- [DT-026] (Axe 8) Onglet Comptes v2 organisé par compte (3 zones) : le glisser-déposer de réordonnancement est **limité à la
+  zone 1** (comptes connectés), réordonnant l'ordre de rotation persisté (`AccountsViewModel.MoveItem`). Régression assumée :
+  plus de réordonnancement des personnages non connectés via l'UI (la rotation les ignore de toute façon).
 
 **Fichiers critiques — ne pas modifier sans discussion :**
 - `src/App/Interop/NativeMethods.cs` (contraintes C-02/C-03).
@@ -130,6 +155,31 @@
 ## Historique des Axes
 
 <!-- Une entrée par Axe complété. Ajoutée par /finalise. -->
+
+### Axe 8 — Comptes ↔ Personnages (évolution, 2026-09-24)
+
+**Périmètre livré :** distinction **Compte** (`GameAccount`) / **Personnage** (`AccountConfig`, nom historique) + lien
+`AccountName`. `schemaVersion 2` + migration additive v1→v2 (partagée store/import). Partition pure 3 zones
+(`AccountZones`) : comptes connectés / personnages connectés sans compte (+ liaison au compte disponible) / comptes
+déconnectés. Onglet Comptes réécrit (3 zones, DnD zone 1). Réglages : CRUD comptes (créer/supprimer cascade + liste
+dépliable des personnages liés avec suppression, sans renommage). Activation directe **par compte**, libellée par le
+personnage connecté. Barre de défilement sombre globale. Couvre comptes-v2 US-C01..C06 + RG-C01..C07.
+
+**Changements structurants :** nouveaux modèles `GameAccount` + `AppConfig.GameAccounts` + `AccountConfig.AccountName` ;
+`AccountRuntimeState.AccountName` porté par `AccountMerge`. `MainViewModel` gagne `AddAccount`/`DeleteAccount`/
+`DeleteCharacter`/`SetAccountDirectBinding` (seul writer) et s'abonne à `AccountsViewModel.RuntimeChanged`.
+`AccountsViewModel` expose 3 collections de zones + `LinkCharacter` + `ConnectedCharacterOf`. `ShortcutsViewModel`
+active directe par compte (slot `Id` = compte). Nouveaux VM de lignes (Connected/Unlinked/GameAccountRow/LinkedCharacter).
+
+**Décisions :** [DT-024] `AccountConfig`=personnage / `GameAccount`=compte (compat JSON) ; [DT-025] activation directe
+par compte (libellé runtime) ; [DT-026] DnD limité à la zone 1.
+
+**Vérifications :** `dotnet build` Debug + Release 0/0 ; `dotnet test` 120/120 (validation nom, partition 3 zones,
+CRUD + cascade, liaison, activation directe par compte + libellé connecté, migration v1→v2 round-trip).
+
+**Dette technique assumée :** rendu réel des 3 zones / DnD / ComboBox / scrollbar / auto-dismiss 10 s non testables
+unitairement → recette. Legacy `AccountConfig.DirectBinding` (configs v1) inerte (non exposé). Réordonnancement des
+personnages non connectés non exposé (DT-026).
 
 ### Axe 7 — Tray, cycle de vie & réglages (2026-09-24)
 

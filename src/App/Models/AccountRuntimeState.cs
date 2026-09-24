@@ -11,8 +11,10 @@ namespace DofusSwitcher.Models;
 /// <param name="IsConnected">Vrai si une fenêtre DOFUS correspondante existe actuellement (RG-D02).</param>
 /// <param name="IsExcluded">Recopié depuis la config : compte retiré de la rotation mais conservé (EF-09).</param>
 /// <param name="Handle">HWND de la fenêtre si connecté, sinon <c>0</c>. Utilisé à l'Axe 6.</param>
+/// <param name="AccountName">Compte lié (recopié de la config, v2), ou <c>null</c> si non lié. Pilote les 3 zones.</param>
 public readonly record struct AccountRuntimeState(
     string CharacterName,
     bool IsConnected,
     bool IsExcluded,
-    nint Handle);
+    nint Handle,
+    string? AccountName = null);

@@ -25,14 +25,17 @@ public sealed class MainViewModel : ObservableObject
         IFileDialogService fileDialog)
     {
         Config = config;
-        Accounts = new AccountsViewModel(config.Accounts, detector);
-        // Réordonnancement/exclusion (Axe 4) → maj de la config → autosave débouncé (ref [DT-006]).
+        Accounts = new AccountsViewModel(config.Accounts, detector, config.GameAccounts);
+        // Réordonnancement/exclusion/liaison (Axe 4/8) → maj de la config → autosave débouncé (ref [DT-006]).
         Accounts.AccountsChanged += OnAccountsChanged;
-        // Raccourcis (Axe 5) : suivant/précédent top-level ici, activation directe via AccountsViewModel
-        // (chemin unique de mutation des comptes — préserve le DirectBinding lors d'un réordonnancement).
-        Shortcuts = new ShortcutsViewModel(config, capture, SetNextBinding, SetPrevBinding, Accounts.SetDirectBinding);
-        // Réglages (Axe 7) : suspension + démarrage Windows + export/import, tous remontés ici (seul writer).
-        Settings = new SettingsViewModel(config, startup, fileDialog, SetInterceptionSuspended, SetStartWithWindows, ApplyImportedConfig);
+        // Raccourcis (Axe 5/8) : suivant/précédent top-level ici, activation directe liée au COMPTE
+        // (le libellé suit le personnage connecté du compte, fourni par AccountsViewModel).
+        Shortcuts = new ShortcutsViewModel(config, capture, SetNextBinding, SetPrevBinding,
+            SetAccountDirectBinding, Accounts.ConnectedCharacterOf);
+        Accounts.RuntimeChanged += Shortcuts.OnRuntimeChanged; // connexion/déconnexion → libellés directs à jour
+        // Réglages (Axe 7/8) : suspension + démarrage Windows + export/import + CRUD comptes, remontés ici (seul writer).
+        Settings = new SettingsViewModel(config, startup, fileDialog, SetInterceptionSuspended, SetStartWithWindows,
+            ApplyImportedConfig, AddAccount, DeleteAccount, DeleteCharacter);
     }
 
     /// <summary>Titre affiché dans la barre de la fenêtre.</summary>
@@ -60,14 +63,15 @@ public sealed class MainViewModel : ObservableObject
             .Select(i => new RotationSlot(i.CharacterName, i.Handle, i.IsConnected, i.IsExcluded))
             .ToList();
 
-        // Associations directes → HWND résolu par nom (0 si le compte n'est pas connecté).
-        var handlesByName = slots
-            .Where(s => s.IsConnected)
-            .ToDictionary(s => s.CharacterName, s => s.Handle, StringComparer.Ordinal);
+        // Activation directe par COMPTE (Axe 8) → HWND du personnage lié actuellement connecté (0 si aucun).
         var directs = new Dictionary<Binding, nint>();
-        foreach (var account in Config.Accounts)
-            if (account.DirectBinding is not null)
-                directs[account.DirectBinding] = handlesByName.GetValueOrDefault(account.CharacterName);
+        foreach (var game in Config.GameAccounts)
+        {
+            if (game.DirectBinding is null) continue;
+            var connected = Accounts.Items.FirstOrDefault(i =>
+                i.IsConnected && i.AccountName is not null && NameEquals(i.AccountName, game.Name));
+            directs[game.DirectBinding] = connected?.Handle ?? 0;
+        }
 
         return new RotationSnapshot(slots, Config.NextBinding, Config.PrevBinding, directs);
     }
@@ -105,6 +109,21 @@ public sealed class MainViewModel : ObservableObject
         RaiseConfigChanged();
     }
 
+    /// <summary>
+    /// Affecte (ou efface) l'entrée d'activation directe d'un <b>compte</b> (Axe 8). Portée par le compte,
+    /// pas le personnage : à l'appui, le personnage lié connecté est activé (BuildRotationSnapshot).
+    /// </summary>
+    private void SetAccountDirectBinding(string accountName, Binding? binding)
+    {
+        Config = Config with
+        {
+            GameAccounts = Config.GameAccounts
+                .Select(a => NameEquals(a.Name, accountName) ? a with { DirectBinding = binding } : a)
+                .ToList(),
+        };
+        RaiseConfigChanged();
+    }
+
     /// <summary>Bascule la suspension globale de l'interception (RG-T02) — appelée par le tray ou l'onglet Réglages.</summary>
     private void SetInterceptionSuspended(bool suspended)
     {
@@ -127,8 +146,62 @@ public sealed class MainViewModel : ObservableObject
     {
         Config = imported;
         Accounts.LoadPersisted(imported.Accounts);
+        Accounts.LoadGameAccounts(imported.GameAccounts);
         RaiseConfigChanged();
     }
+
+    /// <summary>
+    /// Crée un compte (Axe 8, US-C01). Valide le nom (RG-C01) et l'unicité insensible à la casse ;
+    /// renvoie un message d'erreur si refus, sinon <c>null</c> (créé + persisté). Seul writer.
+    /// </summary>
+    private string? AddAccount(string name)
+    {
+        var trimmed = name.Trim();
+        if (!GameAccount.IsValidName(trimmed))
+            return "Nom invalide : lettres, chiffres, espaces ou tirets (1 à 40 caractères).";
+        if (Config.GameAccounts.Any(a => NameEquals(a.Name, trimmed)))
+            return "Ce nom de compte existe déjà.";
+
+        Config = Config with { GameAccounts = [.. Config.GameAccounts, new GameAccount(trimmed)] };
+        Accounts.LoadGameAccounts(Config.GameAccounts);
+        RaiseConfigChanged();
+        return null;
+    }
+
+    /// <summary>
+    /// Supprime un compte (US-C03) : retire le compte ET les personnages liés (cascade, RG-C04), sans
+    /// confirmation. Les personnages liés encore connectés réapparaîtront non liés (runtime, zone 2).
+    /// </summary>
+    private void DeleteAccount(string name)
+    {
+        if (!Config.GameAccounts.Any(a => NameEquals(a.Name, name))) return;
+
+        var accounts = Config.GameAccounts.Where(a => !NameEquals(a.Name, name)).ToList();
+        var characters = Config.Accounts
+            .Where(c => c.AccountName is null || !NameEquals(c.AccountName, name))
+            .ToList();
+
+        Config = Config with { GameAccounts = accounts, Accounts = characters };
+        Accounts.LoadPersisted(Config.Accounts);
+        Accounts.LoadGameAccounts(Config.GameAccounts);
+        RaiseConfigChanged();
+    }
+
+    /// <summary>
+    /// Supprime un personnage (sa config persistée) — depuis la liste dépliée d'un compte (Réglages, Axe 8).
+    /// S'il est encore connecté, il réapparaît non lié (runtime, zone 2).
+    /// </summary>
+    private void DeleteCharacter(string characterName)
+    {
+        if (!Config.Accounts.Any(c => c.CharacterName == characterName)) return;
+
+        var characters = Config.Accounts.Where(c => c.CharacterName != characterName).ToList();
+        Config = Config with { Accounts = characters };
+        Accounts.LoadPersisted(Config.Accounts);
+        RaiseConfigChanged();
+    }
+
+    private static bool NameEquals(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Rafraîchit les onglets Raccourcis et Réglages sur la nouvelle config puis notifie l'autosave.</summary>
     private void RaiseConfigChanged()

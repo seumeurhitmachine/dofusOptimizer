@@ -15,8 +15,12 @@ namespace DofusSwitcher.Models;
 /// <param name="NextBinding">Entrée de bascule <c>suivant</c>, optionnelle et indépendante.</param>
 /// <param name="PrevBinding">Entrée de bascule <c>précédent</c>, optionnelle et indépendante.</param>
 /// <param name="Accounts">
-/// Comptes ordonnés : l'ordre de la liste <b>est</b> l'ordre de rotation (source unique de
-/// vérité — pas de champ <c>order</c> séparé, data-model §AppConfig).
+/// <b>Personnages</b> ordonnés (type <see cref="AccountConfig"/>, nom historique) : l'ordre de la liste
+/// <b>est</b> l'ordre de rotation (source unique de vérité — pas de champ <c>order</c> séparé, data-model §AppConfig).
+/// </param>
+/// <param name="GameAccounts">
+/// <b>Comptes</b> (v2) déclarés par l'utilisateur. Absent des configs v1 → migré en liste vide.
+/// Le lien personnage→compte est porté par <see cref="AccountConfig.AccountName"/>.
 /// </param>
 public sealed record AppConfig(
     int SchemaVersion,
@@ -24,13 +28,14 @@ public sealed record AppConfig(
     bool StartWithWindows,
     Binding? NextBinding,
     Binding? PrevBinding,
-    List<AccountConfig> Accounts)
+    List<AccountConfig> Accounts,
+    List<GameAccount> GameAccounts)
 {
-    /// <summary>Version de schéma produite par cette version de l'app.</summary>
-    public const int CurrentSchemaVersion = 1;
+    /// <summary>Version de schéma produite par cette version de l'app. v2 : ajout des comptes (v1 = personnages seuls).</summary>
+    public const int CurrentSchemaVersion = 2;
 
     /// <summary>
-    /// Configuration vide par défaut : aucun compte, associations par défaut
+    /// Configuration vide par défaut : aucun personnage, aucun compte, associations par défaut
     /// <c>suivant = XButton2</c> / <c>précédent = XButton1</c> (data-model §AppConfig).
     /// </summary>
     public static AppConfig Default => new(
@@ -39,7 +44,8 @@ public sealed record AppConfig(
         StartWithWindows: false,
         NextBinding: new Binding(BindingKind.MouseButton, AppConstants.DefaultNextButtonCode),
         PrevBinding: new Binding(BindingKind.MouseButton, AppConstants.DefaultPrevButtonCode),
-        Accounts: []);
+        Accounts: [],
+        GameAccounts: []);
 
     /// <summary>
     /// Énumère toutes les entrées assignées (suivant, précédent, et les directes des comptes),
@@ -51,6 +57,8 @@ public sealed record AppConfig(
         if (PrevBinding is not null) yield return PrevBinding;
         foreach (var account in Accounts)
             if (account.DirectBinding is not null) yield return account.DirectBinding;
+        foreach (var game in GameAccounts)
+            if (game.DirectBinding is not null) yield return game.DirectBinding;
     }
 
     /// <summary>

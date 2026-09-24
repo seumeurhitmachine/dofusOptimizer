@@ -3,78 +3,34 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:scm="clr-namespace:System.ComponentModel;assembly=WindowsBase"
-             xmlns:sys="clr-namespace:System;assembly=System.Runtime"
              mc:Ignorable="d"
              Background="{StaticResource BackgroundBrush}">
 
     <!--
-        Onglet Comptes (ui-design.md §Composants/§Interactions). Liste temps réel avec état + numéro de
-        rotation + réordonnancement par glisser-déposer (poignée ☰) + exclusion/réintégration (bouton œil).
-        [ARCH] Aucune valeur HEX ici : uniquement des brushes de Colors.xaml. L'état n'est jamais porté par
-        la seule couleur (la pastille est doublée du numéro et de l'italique/grisé pour l'exclusion) — WCAG.
-        Ordre d'affichage : les comptes connectés en tête, absents en dessous, séparés d'un espace. Ce tri
-        est purement visuel (CollectionViewSource) ; Items reste dans l'ordre de rotation persistant, seule
-        source consommée par le glisser-déposer et la persistance.
+        Onglet Comptes v2 (spec comptes-v2 §2.6) : 3 zones.
+        1. Comptes connectés (compte + personnage connecté en sous-titre) — en haut, ordre de rotation.
+        2. Personnages connectés sans compte — avec liaison à un compte disponible.
+        3. Comptes déconnectés ayant des personnages liés — collés en bas.
+        [DECISION] Le glisser-déposer de réordonnancement (v1) n'est pas exposé ici : la vue est
+        organisée par compte, pas en liste de rotation unique. La rotation reste sur l'ordre persisté.
+        [ARCH] Aucune valeur HEX ici : uniquement des brushes de Colors.xaml.
     -->
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
 
-        <!-- Deux vues filtrées sur la même collection Items (ordre de rotation persistant) : les comptes
-             connectés (liste du haut) et les déconnectés (liste du bas, collée en bas de page). Le filtrage
-             et le tri sont « live » : un client qui se connecte/déconnecte bascule de liste en direct. -->
-        <CollectionViewSource x:Key="ConnectedAccounts"
-                              Source="{Binding Items}"
-                              Filter="Connected_Filter"
-                              IsLiveFilteringRequested="True"
-                              IsLiveSortingRequested="True">
-            <CollectionViewSource.SortDescriptions>
-                <scm:SortDescription PropertyName="Number" Direction="Ascending" />
-            </CollectionViewSource.SortDescriptions>
-            <CollectionViewSource.LiveFilteringProperties>
-                <sys:String>IsConnected</sys:String>
-            </CollectionViewSource.LiveFilteringProperties>
-            <CollectionViewSource.LiveSortingProperties>
-                <sys:String>Number</sys:String>
-            </CollectionViewSource.LiveSortingProperties>
-        </CollectionViewSource>
-
-        <CollectionViewSource x:Key="DisconnectedAccounts"
-                              Source="{Binding Items}"
-                              Filter="Disconnected_Filter"
-                              IsLiveFilteringRequested="True"
-                              IsLiveSortingRequested="True">
-            <CollectionViewSource.SortDescriptions>
-                <scm:SortDescription PropertyName="Number" Direction="Ascending" />
-            </CollectionViewSource.SortDescriptions>
-            <CollectionViewSource.LiveFilteringProperties>
-                <sys:String>IsConnected</sys:String>
-            </CollectionViewSource.LiveFilteringProperties>
-            <CollectionViewSource.LiveSortingProperties>
-                <sys:String>Number</sys:String>
-            </CollectionViewSource.LiveSortingProperties>
-        </CollectionViewSource>
-
-        <!-- Icônes œil en vecteur (aucune dépendance de police : rendu garanti dans l'app).
-             Ouvert (compte visible dans la rotation) : contour en amande + iris.
-             Barré (compte exclu/caché) : le même œil traversé d'un trait diagonal. -->
+        <!-- Icônes œil (visible / barré = exclu de la rotation). -->
         <Geometry x:Key="EyeOpenGeometry">M8,4 C13,4 16,8 16,8 C16,8 13,12 8,12 C3,12 0,8 0,8 C0,8 3,4 8,4 Z M8,5.5 A2.5,2.5 0 1 0 8,10.5 A2.5,2.5 0 1 0 8,5.5 Z</Geometry>
         <Geometry x:Key="EyeClosedGeometry">M8,4 C13,4 16,8 16,8 C16,8 13,12 8,12 C3,12 0,8 0,8 C0,8 3,4 8,4 Z M8,5.5 A2.5,2.5 0 1 0 8,10.5 A2.5,2.5 0 1 0 8,5.5 Z M1,1 L15,15</Geometry>
 
-        <!-- Bouton œil (exclure / réintégrer) : icône sobre, sans bordure, survol discret.
-             L'icône (ouvert/barré) est fournie en Content par la ligne, pour pouvoir la basculer
-             selon l'état exclu du compte. -->
+        <!-- Bouton œil (exclure / réintégrer le personnage). -->
         <Style x:Key="EyeButtonStyle" TargetType="Button">
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Root"
-                                Background="Transparent"
-                                CornerRadius="4"
-                                Padding="6,4">
+                        <Border x:Name="Root" Background="Transparent" CornerRadius="4" Padding="6,4">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
@@ -87,140 +43,191 @@
             </Setter>
         </Style>
 
-        <!-- Ligne de compte : fond surface, survol surfaceAlt, coins arrondis. Les comptes déconnectés
-             sont plus compacts (padding réduit) pour bien les distinguer des connectés. -->
-        <Style x:Key="AccountRowStyle" TargetType="ListBoxItem">
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="Padding" Value="10,8" />
-            <Setter Property="Margin" Value="0,0,0,6" />
+        <!-- Bouton d'action sobre (Lier). -->
+        <Style x:Key="ActionButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Padding" Value="10,5" />
+            <Setter Property="Margin" Value="6,0,0,0" />
+            <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="ListBoxItem">
+                    <ControlTemplate TargetType="Button">
                         <Border x:Name="Root"
                                 Background="{StaticResource SurfaceBrush}"
                                 BorderBrush="{StaticResource SurfaceAltBrush}"
-                                BorderThickness="1"
-                                CornerRadius="4"
+                                BorderThickness="1" CornerRadius="4"
                                 Padding="{TemplateBinding Padding}">
-                            <ContentPresenter />
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Root" Property="Background" Value="{StaticResource SurfaceAltBrush}" />
                             </Trigger>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Root" Property="Opacity" Value="0.5" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
-            <Style.Triggers>
-                <!-- Déconnecté : ligne plus compacte (padding horizontal et vertical réduits). -->
-                <DataTrigger Binding="{Binding IsConnected}" Value="False">
-                    <Setter Property="Padding" Value="6,4" />
-                    <Setter Property="Margin" Value="0,0,0,4" />
-                </DataTrigger>
-            </Style.Triggers>
         </Style>
 
-        <!-- Gabarit de ligne partagé par les deux listes (connectés / déconnectés). -->
-        <DataTemplate x:Key="AccountRowTemplate">
-            <Grid x:Name="RowRoot">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+        <!-- Élément de liste déroulante (compte) — thème sombre. -->
+        <Style x:Key="AccountComboBoxItemStyle" TargetType="ComboBoxItem">
+            <Setter Property="TextElement.Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="Padding" Value="8,5" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="Bd" Background="Transparent" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource SurfaceAltBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
-                <!-- Poignée de glisser-déposer (ui-design §Interactions). Masquée sur les comptes
-                     déconnectés : pas de réordonnancement pour les inactifs. -->
-                <TextBlock Grid.Column="0"
-                           x:Name="DragHandle"
-                           Text="&#9776;"
-                           Margin="0,0,10,0"
-                           VerticalAlignment="Center"
-                           Cursor="SizeAll"
-                           ToolTip="Glisser pour réordonner"
-                           Foreground="{StaticResource TextSecondaryBrush}"
-                           PreviewMouseLeftButtonDown="Handle_PreviewMouseLeftButtonDown"
-                           PreviewMouseMove="Handle_PreviewMouseMove" />
+        <!-- ComboBox de liaison (compte disponible) — thème sombre complet (champ + liste déroulante). -->
+        <Style x:Key="AccountComboBoxStyle" TargetType="ComboBox">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="MinWidth" Value="130" />
+            <Setter Property="ItemContainerStyle" Value="{StaticResource AccountComboBoxItemStyle}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton Focusable="False" ClickMode="Press"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border Background="{StaticResource SurfaceBrush}"
+                                                BorderBrush="{StaticResource SurfaceAltBrush}"
+                                                BorderThickness="1" CornerRadius="4" Padding="8,5">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="1" Text="&#9662;" Margin="6,0,0,0"
+                                                           VerticalAlignment="Center"
+                                                           Foreground="{StaticResource TextSecondaryBrush}" />
+                                            </Grid>
+                                        </Border>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <ContentPresenter IsHitTestVisible="False"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              TextElement.Foreground="{StaticResource TextPrimaryBrush}"
+                                              Margin="9,0,26,0" VerticalAlignment="Center" HorizontalAlignment="Left" />
+                            <Popup IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom"
+                                   AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
+                                <Border Background="{StaticResource SurfaceBrush}"
+                                        BorderBrush="{StaticResource SurfaceAltBrush}" BorderThickness="1"
+                                        CornerRadius="4" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
+                                    <ScrollViewer MaxHeight="200"><ItemsPresenter /></ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
-                <!-- Numéro de rotation, à gauche du nom. -->
-                <TextBlock Grid.Column="1"
-                           x:Name="NumberText"
-                           Text="{Binding Number}"
-                           MinWidth="16"
-                           Margin="0,0,10,0"
-                           TextAlignment="Right"
-                           VerticalAlignment="Center"
-                           FontSize="13"
-                           FontWeight="SemiBold"
-                           Foreground="{StaticResource TextSecondaryBrush}" />
+        <!-- Carte de ligne (compte/personnage). -->
+        <Style x:Key="CardBorderStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource SurfaceAltBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+        </Style>
 
-                <!-- Nom de personnage. -->
-                <TextBlock Grid.Column="2"
-                           x:Name="NameText"
-                           Text="{Binding CharacterName}"
-                           VerticalAlignment="Center"
-                           Foreground="{StaticResource TextPrimaryBrush}"
-                           FontSize="13" />
+        <!-- En-tête de zone. -->
+        <Style x:Key="ZoneHeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+            <Setter Property="Margin" Value="2,0,0,6" />
+        </Style>
 
-                <!-- État : pastille seule (verte connecté / grise absent), sans libellé. -->
-                <TextBlock Grid.Column="3"
-                           x:Name="StateDot"
-                           Margin="8,0"
-                           VerticalAlignment="Center"
-                           FontSize="22"
-                           LineHeight="22"
-                           Text="&#9679;"
-                           ToolTip="Absent"
-                           Foreground="{StaticResource TextSecondaryBrush}" />
-
-                <!-- Exclure / réintégrer (bouton œil), à droite de la ligne. Œil ouvert quand le
-                     compte est visible, œil barré quand il est exclu (caché). -->
-                <Button Grid.Column="4"
-                        x:Name="EyeButton"
-                        Style="{StaticResource EyeButtonStyle}"
-                        ToolTip="Exclure de la rotation"
-                        Command="{Binding DataContext.ToggleExcludeItemCommand, RelativeSource={RelativeSource AncestorType={x:Type ListBox}}}"
-                        CommandParameter="{Binding}">
-                    <Path x:Name="EyeIcon"
-                          Data="{StaticResource EyeOpenGeometry}"
-                          Width="20" Height="14"
-                          Stretch="Uniform"
-                          Fill="{x:Null}"
-                          Stroke="{StaticResource TextSecondaryBrush}"
-                          StrokeThickness="1"
-                          StrokeLineJoin="Round" />
-                </Button>
-            </Grid>
-
+        <!-- Zone 1 : compte connecté + personnage connecté en sous-titre. Réordonnable par glisser-déposer
+             (poignée ☰) : l'ordre = ordre de rotation, persisté même pour les personnages absents. -->
+        <DataTemplate x:Key="ConnectedAccountTemplate">
+            <Border Style="{StaticResource CardBorderStyle}" AllowDrop="True" Drop="Row_Drop">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="&#9776;" Margin="0,0,10,0" VerticalAlignment="Center"
+                               Cursor="SizeAll" ToolTip="Glisser pour réordonner la rotation"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               PreviewMouseLeftButtonDown="Handle_PreviewMouseLeftButtonDown"
+                               PreviewMouseMove="Handle_PreviewMouseMove" />
+                    <StackPanel Grid.Column="1" x:Name="Texts" VerticalAlignment="Center">
+                        <TextBlock x:Name="CharName" Text="{Binding Character.CharacterName}" FontSize="13" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimaryBrush}" />
+                        <TextBlock Text="{Binding AccountName}" FontSize="11"
+                                   Foreground="{StaticResource TextSecondaryBrush}" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="2" Margin="8,0" VerticalAlignment="Center" FontSize="20"
+                               Text="&#9679;" ToolTip="Connecté" Foreground="{StaticResource SuccessBrush}" />
+                    <Button Grid.Column="3" Style="{StaticResource EyeButtonStyle}"
+                            ToolTip="Exclure de la rotation"
+                            Command="{Binding DataContext.ToggleExcludeItemCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                            CommandParameter="{Binding Character}">
+                        <Path x:Name="Eye" Data="{StaticResource EyeOpenGeometry}" Width="20" Height="14"
+                              Stretch="Uniform" Fill="{x:Null}" Stroke="{StaticResource TextSecondaryBrush}"
+                              StrokeThickness="1" StrokeLineJoin="Round" />
+                    </Button>
+                </Grid>
+            </Border>
             <DataTemplate.Triggers>
-                <DataTrigger Binding="{Binding IsConnected}" Value="True">
-                    <Setter TargetName="StateDot" Property="Foreground" Value="{StaticResource SuccessBrush}" />
-                    <Setter TargetName="StateDot" Property="ToolTip" Value="Connecté" />
-                </DataTrigger>
-                <!-- Déconnecté : liste plus distincte — pas de numéro d'ordre ni de poignée de
-                     glisser-déposer, texte et pastille réduits. -->
-                <DataTrigger Binding="{Binding IsConnected}" Value="False">
-                    <Setter TargetName="DragHandle" Property="Visibility" Value="Collapsed" />
-                    <Setter TargetName="NumberText" Property="Visibility" Value="Collapsed" />
-                    <Setter TargetName="NameText" Property="FontSize" Value="12" />
-                    <Setter TargetName="StateDot" Property="FontSize" Value="15" />
-                    <Setter TargetName="StateDot" Property="LineHeight" Value="15" />
-                </DataTrigger>
-                <!-- Exclu : ligne grisée, nom en italique, œil barré (tooltip réintégrer). -->
-                <DataTrigger Binding="{Binding IsExcluded}" Value="True">
-                    <Setter TargetName="RowRoot" Property="Opacity" Value="0.5" />
-                    <Setter TargetName="NameText" Property="FontStyle" Value="Italic" />
-                    <Setter TargetName="NameText" Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
-                    <Setter TargetName="EyeIcon" Property="Data" Value="{StaticResource EyeClosedGeometry}" />
-                    <Setter TargetName="EyeButton" Property="ToolTip" Value="Réintégrer dans la rotation" />
+                <DataTrigger Binding="{Binding Character.IsExcluded}" Value="True">
+                    <Setter TargetName="Texts" Property="Opacity" Value="0.5" />
+                    <Setter TargetName="CharName" Property="FontStyle" Value="Italic" />
+                    <Setter TargetName="Eye" Property="Data" Value="{StaticResource EyeClosedGeometry}" />
                 </DataTrigger>
             </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <!-- Zone 2 : personnage connecté sans compte + liaison. -->
+        <DataTemplate x:Key="UnlinkedCharacterTemplate">
+            <Border Style="{StaticResource CardBorderStyle}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="13"
+                               Text="{Binding Character.CharacterName}" Foreground="{StaticResource TextPrimaryBrush}" />
+                    <ComboBox Grid.Column="1" Style="{StaticResource AccountComboBoxStyle}"
+                              ItemsSource="{Binding AvailableAccounts}"
+                              SelectedItem="{Binding SelectedAccount, Mode=TwoWay}"
+                              ToolTip="Compte à rattacher (seuls les comptes disponibles sont proposés)" />
+                    <Button Grid.Column="2" Style="{StaticResource ActionButtonStyle}"
+                            Content="Lier" Command="{Binding LinkCommand}" />
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!-- Zone 3 : compte déconnecté (nom seul, sans personnage). -->
+        <DataTemplate x:Key="DisconnectedAccountTemplate">
+            <Border Style="{StaticResource CardBorderStyle}" Opacity="0.6">
+                <TextBlock Text="{Binding}" FontSize="13" FontWeight="SemiBold"
+                           Foreground="{StaticResource TextPrimaryBrush}" />
+            </Border>
         </DataTemplate>
     </UserControl.Resources>
 
@@ -230,46 +237,45 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Comptes connectés : liste du haut, occupe l'espace disponible. -->
-        <ListBox x:Name="ConnectedList"
-                 Grid.Row="0"
-                 ItemsSource="{Binding Source={StaticResource ConnectedAccounts}}"
-                 Background="Transparent"
-                 BorderThickness="0"
-                 VerticalAlignment="Stretch"
-                 VerticalContentAlignment="Top"
-                 AllowDrop="True"
-                 Drop="AccountsList_Drop"
-                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                 ScrollViewer.VerticalScrollBarVisibility="Auto"
-                 ItemContainerStyle="{StaticResource AccountRowStyle}"
-                 ItemTemplate="{StaticResource AccountRowTemplate}"
-                 Visibility="{Binding HasItems, Converter={StaticResource BoolToVisibility}}" />
+        <!-- Zones 1 & 2 : haut de page, défilables. -->
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto"
+                      Visibility="{Binding HasItems, Converter={StaticResource BoolToVisibility}}">
+            <StackPanel>
+                <StackPanel Visibility="{Binding HasConnected, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Text="Comptes connectés" Style="{StaticResource ZoneHeaderStyle}" />
+                    <ItemsControl ItemsSource="{Binding ConnectedAccounts}"
+                                  ItemTemplate="{StaticResource ConnectedAccountTemplate}" />
+                </StackPanel>
 
-        <!-- Comptes déconnectés : collés en bas de la page, sous un espace flexible. Inactifs :
-             pas de glisser-déposer (ni source ni cible) — seul le bouton œil (réintégrer) agit. -->
-        <ListBox x:Name="DisconnectedList"
-                 Grid.Row="1"
-                 ItemsSource="{Binding Source={StaticResource DisconnectedAccounts}}"
-                 Background="Transparent"
-                 BorderThickness="0"
-                 VerticalAlignment="Bottom"
-                 MaxHeight="220"
-                 Margin="0,10,0,0"
-                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                 ScrollViewer.VerticalScrollBarVisibility="Auto"
-                 ItemContainerStyle="{StaticResource AccountRowStyle}"
-                 ItemTemplate="{StaticResource AccountRowTemplate}"
-                 Visibility="{Binding HasItems, Converter={StaticResource BoolToVisibility}}" />
+                <StackPanel Margin="0,6,0,0"
+                            Visibility="{Binding HasUnlinked, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Text="Personnages sans compte" Style="{StaticResource ZoneHeaderStyle}" />
+                    <ItemsControl ItemsSource="{Binding UnlinkedConnected}"
+                                  ItemTemplate="{StaticResource UnlinkedCharacterTemplate}" />
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
 
-        <!-- État vide : aucun compte persisté ni détecté. -->
+        <!-- Zone 3 : comptes déconnectés, collés en bas. -->
+        <StackPanel Grid.Row="1" Margin="0,10,0,0"
+                    Visibility="{Binding HasDisconnected, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock Text="Comptes déconnectés" Style="{StaticResource ZoneHeaderStyle}" />
+            <ItemsControl ItemsSource="{Binding DisconnectedAccounts}"
+                          ItemTemplate="{StaticResource DisconnectedAccountTemplate}"
+                          MaxHeight="180">
+                <ItemsControl.Template>
+                    <ControlTemplate TargetType="ItemsControl">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"><ItemsPresenter /></ScrollViewer>
+                    </ControlTemplate>
+                </ItemsControl.Template>
+            </ItemsControl>
+        </StackPanel>
+
+        <!-- État vide : aucun personnage détecté ni persisté. -->
         <TextBlock Grid.Row="0" Grid.RowSpan="2"
                    Text="Aucun client DOFUS détecté. Ouvrez un client : il apparaîtra ici automatiquement."
-                   TextWrapping="Wrap"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"
-                   Foreground="{StaticResource TextSecondaryBrush}"
-                   FontSize="12"
+                   TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Foreground="{StaticResource TextSecondaryBrush}" FontSize="12"
                    Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
     </Grid>
 </UserControl>

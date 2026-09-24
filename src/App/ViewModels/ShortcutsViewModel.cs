@@ -27,7 +27,8 @@ public sealed class ShortcutsViewModel : ObservableObject
     private readonly IInputCaptureService _capture;
     private readonly Action<Binding?> _applyNext;
     private readonly Action<Binding?> _applyPrev;
-    private readonly Action<string, Binding?> _applyDirect;
+    private readonly Action<string, Binding?> _applyAccountDirect;
+    private readonly Func<string, string?> _connectedCharacterOf;
     private AppConfig _config;
 
     /// <summary>Câble le VM sur la config courante, le service de capture et les chemins d'application.</summary>
@@ -36,13 +37,15 @@ public sealed class ShortcutsViewModel : ObservableObject
         IInputCaptureService capture,
         Action<Binding?> applyNext,
         Action<Binding?> applyPrev,
-        Action<string, Binding?> applyDirect)
+        Action<string, Binding?> applyAccountDirect,
+        Func<string, string?> connectedCharacterOf)
     {
         _config = config;
         _capture = capture;
         _applyNext = applyNext;
         _applyPrev = applyPrev;
-        _applyDirect = applyDirect;
+        _applyAccountDirect = applyAccountDirect;
+        _connectedCharacterOf = connectedCharacterOf;
 
         NextSlot = CreateSlot(NextKey, NextLabel, applyNext);
         PrevSlot = CreateSlot(PrevKey, PrevLabel, applyPrev);
@@ -55,10 +58,10 @@ public sealed class ShortcutsViewModel : ObservableObject
     /// <summary>Emplacement de bascule « précédent ».</summary>
     public ShortcutSlotViewModel PrevSlot { get; }
 
-    /// <summary>Emplacements d'activation directe, un par compte persisté (ordre de rotation).</summary>
+    /// <summary>Emplacements d'activation directe : un par personnage lié à un compte, libellé par le compte (Axe 8).</summary>
     public ObservableCollection<ShortcutSlotViewModel> DirectSlots { get; } = [];
 
-    /// <summary>Vrai s'il existe au moins un compte pour l'activation directe (pilote l'état vide).</summary>
+    /// <summary>Vrai s'il existe au moins un personnage lié pour l'activation directe (pilote l'état vide).</summary>
     public bool HasDirectSlots => DirectSlots.Count > 0;
 
     /// <summary>
@@ -73,15 +76,23 @@ public sealed class ShortcutsViewModel : ObservableObject
         SyncDirectSlots();
     }
 
-    private ShortcutSlotViewModel CreateSlot(string key, string label, Action<Binding?> apply)
+    /// <summary>
+    /// Rafraîchit les libellés d'activation directe quand l'état runtime change (un personnage lié se
+    /// connecte/déconnecte) : le libellé suit le personnage connecté du compte. Appelé par le MainViewModel
+    /// sur <see cref="AccountsViewModel.RuntimeChanged"/>.
+    /// </summary>
+    public void OnRuntimeChanged() => SyncDirectSlots();
+
+    private ShortcutSlotViewModel CreateSlot(string key, string label, Action<Binding?> apply, string? id = null)
     {
         // Le slot se référence lui-même dans ses commandes (pour porter son message de conflit) : la
         // closure capture la variable, non nulle au moment où l'utilisateur déclenche la commande.
         ShortcutSlotViewModel slot = null!;
         slot = new ShortcutSlotViewModel(
             label,
-            capture: () => CaptureInto(key, label, slot, apply),
-            clear: () => ClearSlot(slot, apply));
+            capture: () => CaptureInto(key, slot.Label, slot, apply),
+            clear: () => ClearSlot(slot, apply),
+            id: id);
         return slot;
     }
 
@@ -124,30 +135,42 @@ public sealed class ShortcutsViewModel : ObservableObject
     {
         if (_config.NextBinding is not null) yield return (NextKey, NextLabel, _config.NextBinding);
         if (_config.PrevBinding is not null) yield return (PrevKey, PrevLabel, _config.PrevBinding);
-        foreach (var account in _config.Accounts)
-            if (account.DirectBinding is not null)
-                yield return (DirectKey(account.CharacterName), account.CharacterName, account.DirectBinding);
+        foreach (var game in _config.GameAccounts)
+            if (game.DirectBinding is not null)
+                // Conflit affiché avec le personnage connecté du compte si présent, sinon le nom du compte.
+                yield return (DirectKey(game.Name), DirectLabel(game.Name), game.DirectBinding);
     }
 
-    private static string DirectKey(string characterName) => "direct:" + characterName;
+    private static string DirectKey(string accountName) => "direct:" + accountName;
 
-    /// <summary>Réconcilie <see cref="DirectSlots"/> avec les comptes de la config (clé = nom, ordre = rotation).</summary>
+    /// <summary>Libellé d'un slot direct : le personnage connecté du compte si présent, sinon le nom du compte.</summary>
+    private string DirectLabel(string accountName) => _connectedCharacterOf(accountName) ?? accountName;
+
+    /// <summary>
+    /// Réconcilie <see cref="DirectSlots"/> avec les <b>comptes ayant au moins un personnage lié</b> (Axe 8) :
+    /// un slot <b>par compte</b> (l'entrée est liée au compte), <b>libellé par le personnage connecté</b>
+    /// du compte (sinon le nom du compte). L'identité (clé) = nom du compte. Reconstruction en place.
+    /// </summary>
     private void SyncDirectSlots()
     {
-        // 1. Retirer les slots dont le compte n'est plus persisté.
+        var accounts = _config.GameAccounts
+            .Where(a => _config.Accounts.Any(c => c.AccountName is not null && NameEquals(c.AccountName, a.Name)))
+            .ToList();
+
+        // 1. Retirer les slots dont le compte n'a plus de personnage lié (clé = nom du compte = Id).
         for (var i = DirectSlots.Count - 1; i >= 0; i--)
-            if (!_config.Accounts.Any(a => a.CharacterName == DirectSlots[i].Label))
+            if (!accounts.Any(a => NameEquals(a.Name, DirectSlots[i].Id!)))
                 DirectSlots.RemoveAt(i);
 
-        // 2. Ajouter/mettre à jour et ordonner selon la config.
-        for (var i = 0; i < _config.Accounts.Count; i++)
+        // 2. Ajouter/mettre à jour et ordonner ; libellé = personnage connecté, identité = nom du compte.
+        for (var i = 0; i < accounts.Count; i++)
         {
-            var account = _config.Accounts[i];
-            var existing = DirectSlots.FirstOrDefault(s => s.Label == account.CharacterName);
+            var account = accounts[i];
+            var name = account.Name;
+            var existing = DirectSlots.FirstOrDefault(s => NameEquals(s.Id!, name));
             if (existing is null)
             {
-                var name = account.CharacterName;
-                existing = CreateSlot(DirectKey(name), name, b => _applyDirect(name, b));
+                existing = CreateSlot(DirectKey(name), DirectLabel(name), b => _applyAccountDirect(name, b), id: name);
                 DirectSlots.Insert(i, existing);
             }
             else
@@ -155,9 +178,12 @@ public sealed class ShortcutsViewModel : ObservableObject
                 var currentIndex = DirectSlots.IndexOf(existing);
                 if (currentIndex != i) DirectSlots.Move(currentIndex, i);
             }
+            existing.Label = DirectLabel(name);
             existing.SetBinding(account.DirectBinding);
         }
 
         OnPropertyChanged(nameof(HasDirectSlots));
     }
+
+    private static bool NameEquals(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
 }

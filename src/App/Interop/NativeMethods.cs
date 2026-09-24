@@ -180,10 +180,19 @@ internal static unsafe partial class NativeMethods
     [LibraryImport("user32.dll")]
     internal static partial nint GetForegroundWindow();
 
-    /// <summary>Amène une fenêtre au premier plan. Peut échouer (règles de focus Windows) → fallback.</summary>
+    /// <summary>
+    /// Amène une fenêtre au premier plan. [WARN] La valeur de retour n'est PAS fiable : Windows peut
+    /// renvoyer vrai tout en refusant le vol de focus (verrou de premier plan) et se contenter de faire
+    /// clignoter la fenêtre — d'où l'attache de file d'entrée systématique dans <c>WindowActivator</c>.
+    /// </summary>
     [LibraryImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static partial bool SetForegroundWindow(nint hWnd);
+
+    /// <summary>Place une fenêtre en tête de l'ordre Z (complète <see cref="SetForegroundWindow"/>).</summary>
+    [LibraryImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool BringWindowToTop(nint hWnd);
 
     /// <summary>Vrai si la fenêtre est réduite (icône) — pour la restaurer avant activation.</summary>
     [LibraryImport("user32.dll")]

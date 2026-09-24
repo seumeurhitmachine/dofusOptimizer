@@ -1,3 +1,4 @@
+using DofusSwitcher.Models;
 using DofusSwitcher.ViewModels;
 
 namespace DofusSwitcher.Tests;
@@ -11,7 +12,7 @@ public class SmokeTests
     [Fact]
     public void MainViewModel_ExposeSonTitre()
     {
-        var vm = new MainViewModel();
+        var vm = new MainViewModel(AppConfig.Default);
         Assert.Equal("Dofus Window Switcher", vm.Title);
     }
 

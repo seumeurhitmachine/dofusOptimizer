@@ -1,6 +1,6 @@
 # Modèle de données — Dofus Window Switcher
 
-**Dernière mise à jour :** 2026-09-24 — pré-Axe 1 (init)
+**Dernière mise à jour :** 2026-09-24 — Axe 2 (schéma matérialisé en code, v1 inchangée)
 **Références architecture :** `docs/agent/archis/ARCHI-DOTNET-WPF.md §Persistance`
 
 > Le « modèle de données » de cet outil est le **schéma du fichier de
@@ -115,3 +115,4 @@ partout où il apparaît.
 | Axe | Date | Modification |
 |---|---|---|
 | pré-Axe 1 | 2026-09-24 | Création initiale (schemaVersion 1) |
+| Axe 2 | 2026-09-24 | Matérialisation du schéma en code (`Binding`/`AccountConfig`/`AppConfig`, `AppJsonContext`, `JsonConfigStore`). Aucun champ modifié : schemaVersion reste 1. Invariant d'unicité globale porté par `AppConfig.HasBindingConflicts()`. |

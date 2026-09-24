@@ -1,4 +1,6 @@
 using System.Windows;
+using DofusSwitcher.Persistence;
+using DofusSwitcher.Services;
 using DofusSwitcher.ViewModels;
 using DofusSwitcher.Views;
 
@@ -16,6 +18,8 @@ namespace DofusSwitcher;
 /// </summary>
 public partial class App : Application
 {
+    private ConfigAutosaveService? _autosave;
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -24,9 +28,26 @@ public partial class App : Application
         // fenêtre ne doit pas quitter le process. Posé dès maintenant pour cohérence.
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
-        // Axe 1 : socle uniquement. Persistance / services / tray arrivent aux Axes suivants.
-        var mainViewModel = new MainViewModel();
+        // 1. Persistance : charger la config en tête (fichier absent/corrompu → défaut sans crash).
+        IConfigStore configStore = new JsonConfigStore();
+        var config = configStore.Load();
+
+        // 2. Services : autosave débouncé adossé au store (timer créé sur le thread UI).
+        _autosave = new ConfigAutosaveService(configStore);
+
+        // 3. ViewModel racine : reçoit la config ; ses modifications futures alimentent l'autosave.
+        var mainViewModel = new MainViewModel(config);
+        mainViewModel.ConfigChanged += _autosave.Notify;
+
+        // 4. Fenêtre principale.
         var window = new MainWindow { DataContext = mainViewModel };
         window.Show();
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        // Flush d'un éventuel instantané en attente avant de quitter, puis arrêt du timer.
+        _autosave?.Dispose();
+        base.OnExit(e);
     }
 }

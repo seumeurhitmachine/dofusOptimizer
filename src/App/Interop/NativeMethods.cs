@@ -7,8 +7,10 @@ namespace DofusSwitcher.Interop;
 /// [ARCH] Signatures P/Invoke via source-gen [LibraryImport] (classe partial).
 /// [WARN] Contraintes C-02 (aucun handle sur le processus DOFUS — API fenêtres user32 seules)
 ///        et C-03 (aucune entrée synthétique) : toute signature ajoutée ici doit les respecter.
-///        En particulier, PAS de GetWindowThreadProcessId/OpenProcess : la reconnaissance des
-///        clients passe exclusivement par le titre/la classe de fenêtre (PO-001).
+///        Pour la *reconnaissance* des clients : PAS d'inspection process, titre/classe seuls (PO-001).
+///        <see cref="GetWindowThreadProcessId"/> n'est utilisé QUE pour l'identifiant de thread requis par
+///        <see cref="AttachThreadInput"/> (gestion de file d'entrée, non synthétique) — aucun OpenProcess,
+///        aucun handle de processus : conforme C-02/C-03 (switching.md §3.x).
 /// [DECISION] EnumWindows et SetWinEventHook prennent un callback. [LibraryImport] ne marshale
 ///        PAS les délégués (diagnostic SYSLIB1051) : on passe des pointeurs de fonction
 ///        (delegate* unmanaged&lt;...&gt;), voie compatible source-gen. Les cibles sont des méthodes
@@ -103,4 +105,116 @@ internal static unsafe partial class NativeMethods
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static partial bool UnhookWinEvent(nint hWinEventHook);
+
+    // --- Hooks bas niveau clavier/souris (Axe 6, capture globale sans élévation — ENF-005). ---
+
+    /// <summary>Hook clavier bas niveau (<c>WH_KEYBOARD_LL</c>).</summary>
+    internal const int WH_KEYBOARD_LL = 13;
+
+    /// <summary>Hook souris bas niveau (<c>WH_MOUSE_LL</c>).</summary>
+    internal const int WH_MOUSE_LL = 14;
+
+    /// <summary>Messages d'appui : touche, touche système (Alt), boutons souris (dont X1/X2).</summary>
+    internal const nint WM_KEYDOWN = 0x0100;
+    internal const nint WM_SYSKEYDOWN = 0x0104;
+    internal const nint WM_LBUTTONDOWN = 0x0201;
+    internal const nint WM_RBUTTONDOWN = 0x0204;
+    internal const nint WM_MBUTTONDOWN = 0x0207;
+    internal const nint WM_XBUTTONDOWN = 0x020B;
+
+    /// <summary>Index de bouton X dans le mot haut de <c>MSLLHOOKSTRUCT.mouseData</c>.</summary>
+    internal const int XBUTTON1 = 0x0001;
+    internal const int XBUTTON2 = 0x0002;
+
+    /// <summary>Données d'un événement clavier bas niveau (winuser.h).</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct KBDLLHOOKSTRUCT
+    {
+        internal uint vkCode;
+        internal uint scanCode;
+        internal uint flags;
+        internal uint time;
+        internal nuint dwExtraInfo;
+    }
+
+    /// <summary>Données d'un événement souris bas niveau (winuser.h). <c>mouseData</c> porte l'index XButton.</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct MSLLHOOKSTRUCT
+    {
+        internal int ptX;
+        internal int ptY;
+        internal uint mouseData;
+        internal uint flags;
+        internal uint time;
+        internal nuint dwExtraInfo;
+    }
+
+    /// <summary>
+    /// Installe un hook global bas niveau. <paramref name="lpfn"/> est un pointeur de fonction stdcall
+    /// (cible <c>[UnmanagedCallersOnly]</c>) : [LibraryImport] ne marshale pas les délégués (SYSLIB1051).
+    /// [WARN] Le callback DOIT être court (RG-S06, &lt; 100 ms) sinon Windows le contourne (LowLevelHooksTimeout).
+    /// </summary>
+    [LibraryImport("user32.dll", SetLastError = true)]
+    internal static partial nint SetWindowsHookEx(
+        int idHook,
+        delegate* unmanaged[Stdcall]<int, nint, nint, nint> lpfn,
+        nint hmod,
+        uint dwThreadId);
+
+    /// <summary>Retire un hook installé par <see cref="SetWindowsHookEx"/>.</summary>
+    [LibraryImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool UnhookWindowsHookEx(nint hhk);
+
+    /// <summary>Passe l'événement au hook suivant de la chaîne (comportement natif conservé, RG-S02).</summary>
+    [LibraryImport("user32.dll")]
+    internal static partial nint CallNextHookEx(nint hhk, int nCode, nint wParam, nint lParam);
+
+    /// <summary>Handle de module (base de l'exe si <paramref name="lpModuleName"/> est nul) — requis par le hook LL.</summary>
+    [LibraryImport("kernel32.dll", EntryPoint = "GetModuleHandleW", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+    internal static partial nint GetModuleHandle(string? lpModuleName);
+
+    // --- Activation de fenêtre (Axe 6). Non synthétique (C-03), aucun handle process (C-02). ---
+
+    /// <summary>Handle de la fenêtre au premier plan.</summary>
+    [LibraryImport("user32.dll")]
+    internal static partial nint GetForegroundWindow();
+
+    /// <summary>Amène une fenêtre au premier plan. Peut échouer (règles de focus Windows) → fallback.</summary>
+    [LibraryImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool SetForegroundWindow(nint hWnd);
+
+    /// <summary>Vrai si la fenêtre est réduite (icône) — pour la restaurer avant activation.</summary>
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool IsIconic(nint hWnd);
+
+    /// <summary>Change l'état d'affichage d'une fenêtre (<see cref="SW_RESTORE"/> pour dé-réduire).</summary>
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool ShowWindow(nint hWnd, int nCmdShow);
+
+    /// <summary>Restaure une fenêtre réduite/agrandie à sa taille précédente.</summary>
+    internal const int SW_RESTORE = 9;
+
+    /// <summary>
+    /// Identifiant du thread propriétaire de la fenêtre (le <paramref name="lpdwProcessId"/> est ignoré, 0).
+    /// [WARN] Utilisé UNIQUEMENT pour <see cref="AttachThreadInput"/> : identifiant de thread, jamais de
+    /// handle de processus (C-02). Ne pas détourner pour inspecter le process.
+    /// </summary>
+    [LibraryImport("user32.dll", SetLastError = true)]
+    internal static partial uint GetWindowThreadProcessId(nint hWnd, nint lpdwProcessId);
+
+    /// <summary>Identifiant du thread courant (pour l'attache de file d'entrée).</summary>
+    [LibraryImport("kernel32.dll")]
+    internal static partial uint GetCurrentThreadId();
+
+    /// <summary>
+    /// Attache/détache la file d'entrée de deux threads (<c>fAttach</c>). API de gestion de file d'entrée,
+    /// non synthétique (C-03) : contourne le refus de <see cref="SetForegroundWindow"/> sans injecter d'entrée.
+    /// </summary>
+    [LibraryImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool AttachThreadInput(uint idAttach, uint idAttachTo, [MarshalAs(UnmanagedType.Bool)] bool fAttach);
 }

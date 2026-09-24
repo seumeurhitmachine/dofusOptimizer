@@ -20,6 +20,7 @@ public partial class App : Application
 {
     private ConfigAutosaveService? _autosave;
     private IWindowDetector? _windowDetector;
+    private IInputHook? _inputHook;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -44,18 +45,29 @@ public partial class App : Application
         var mainViewModel = new MainViewModel(config, _windowDetector, inputCapture);
         mainViewModel.ConfigChanged += _autosave.Notify;
 
-        // 4. Fenêtre principale.
+        // 4. Interception & bascule de focus (Axe 6) : décision pure → activation → coordinateur.
+        //    Le coordinateur lit l'instantané de rotation du VM (sur le thread UI, dans le callback).
+        IWindowActivator activator = new WindowActivator();
+        ISwitchController switchController = new SwitchController();
+        var coordinator = new SwitchCoordinator(switchController, activator, mainViewModel.BuildRotationSnapshot);
+        coordinator.UpdateConfig(config);
+        mainViewModel.ConfigChanged += coordinator.UpdateConfig; // set d'entrées + suspension à jour
+        _inputHook = new InputHook(coordinator.Handle);
+
+        // 5. Fenêtre principale.
         var window = new MainWindow { DataContext = mainViewModel };
         window.Show();
 
-        // 5. Détection : démarrée après Show() pour que le hook OUTOFCONTEXT poste ses événements
-        //    dans la file de messages du thread UI déjà en pompe (archi §Threading, RG-D05).
+        // 6. Détection puis hooks : démarrés après Show() pour que les callbacks OUTOFCONTEXT / bas niveau
+        //    soient servis par la file de messages du thread UI déjà en pompe (archi §Threading, RG-D05/S06).
         _windowDetector.Start();
+        _inputHook.Start();
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
-        // Libérer le hook natif puis flusher un éventuel instantané en attente avant de quitter.
+        // Libérer les hooks natifs (souris/clavier puis WinEvent) et flusher l'autosave avant de quitter.
+        _inputHook?.Dispose();
         _windowDetector?.Dispose();
         _autosave?.Dispose();
         base.OnExit(e);

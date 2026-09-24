@@ -36,6 +36,31 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>ViewModel de l'onglet Raccourcis : associations suivant/précédent + directes par compte.</summary>
     public ShortcutsViewModel Shortcuts { get; }
 
+    /// <summary>
+    /// Construit l'instantané de rotation (Axe 6) depuis la config (ordre, associations) et l'état runtime
+    /// des comptes (handles/connecté/exclu via <see cref="AccountsViewModel.Items"/>). [WARN] À appeler sur
+    /// le thread UI uniquement (lit la collection d'items) — c'est le cas depuis le callback du hook.
+    /// </summary>
+    public RotationSnapshot BuildRotationSnapshot()
+    {
+        // Ordre = ordre d'affichage des comptes (= ordre de rotation, source unique). Handle/état viennent
+        // du runtime ; l'exclusion est celle affichée (reflète la config matérialisée).
+        var slots = Accounts.Items
+            .Select(i => new RotationSlot(i.CharacterName, i.Handle, i.IsConnected, i.IsExcluded))
+            .ToList();
+
+        // Associations directes → HWND résolu par nom (0 si le compte n'est pas connecté).
+        var handlesByName = slots
+            .Where(s => s.IsConnected)
+            .ToDictionary(s => s.CharacterName, s => s.Handle, StringComparer.Ordinal);
+        var directs = new Dictionary<Binding, nint>();
+        foreach (var account in Config.Accounts)
+            if (account.DirectBinding is not null)
+                directs[account.DirectBinding] = handlesByName.GetValueOrDefault(account.CharacterName);
+
+        return new RotationSnapshot(slots, Config.NextBinding, Config.PrevBinding, directs);
+    }
+
     /// <summary>Configuration applicative en vigueur (source des onglets d'édition à venir).</summary>
     public AppConfig Config { get; private set; }
 

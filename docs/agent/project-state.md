@@ -4,8 +4,8 @@
 
 > Mettre à jour à chaque /finalise. Max 30 lignes.
 
-**Dernier Axe complété :** Axe 5 — Capture d'entrées & associations — 2026-09-24
-**Phase :** Axes initiaux en cours (Axe 5 livré, Axe 6 à démarrer)
+**Dernier Axe complété :** Axe 6 — Interception & bascule de focus (cœur) — 2026-09-24
+**Phase :** Axes initiaux en cours (Axe 6 livré, Axe 7 à démarrer — dernier Axe)
 
 **Fonctionnalités actives :**
 - (aucune US — socle infra) Solution `.slnx` + `src/App` (WPF) + `tests/App.Tests` (xUnit).
@@ -32,6 +32,12 @@
   `ShortcutSlotViewModel` + `ShortcutsView`) : suivant/précédent + directes par compte, effacer, conflit
   inline (RG-S05, réutilise `HasBindingConflicts`, refus avant persistance). `MainViewModel` = seul
   writer de `Config` ; `DirectBinding` via chemin unique `AccountsViewModel.SetDirectBinding`.
+- **Interception & bascule (US-S01/S02/S03)** : décision **pure** `SwitchController` (gate focus DOFUS par
+  appartenance de handle, rotation cyclique avec saut absents/exclus, activation directe) — algo
+  `docs/algos/rotation.md`. Capture globale `InputHook` (`WH_KEYBOARD_LL`+`WH_MOUSE_LL`, décode via
+  `InputCapture`, callback minimal `[UnmanagedCallersOnly]`). Activation `WindowActivator`
+  (`SetForegroundWindow` + repli `AttachThreadInput`, non synthétique). `SwitchCoordinator` = glue
+  (pré-filtre set de bindings + suspension, snapshot via `MainViewModel.BuildRotationSnapshot` sur thread UI).
 
 **Contraintes techniques actives :**
 - .NET 10 + WPF, MVVM manuel, **zéro NuGet** dans l'app, publish single-file self-contained.
@@ -83,6 +89,15 @@
   VM (réutilise `HasBindingConflicts`), refus avant persistance ; réassigner à soi-même ≠ conflit.
 - [DT-016] Lignes « activation directe » sourcées de `AppConfig.Accounts` (comptes persistés/matérialisés),
   pas du détecteur : un compte seulement détecté apparaît après une action sur l'onglet Comptes (DT-013).
+- [DT-017] Gate « focus DOFUS » par **appartenance de handle** (le foreground est un client DOFUS ssi son
+  HWND est parmi les handles connectés du détecteur) : réutilise la détection, aucun relecture titre/classe
+  dans le hot path, ignore le launcher/écran de sélection (non nommés → non connectés).
+- [DT-018] Hook bas niveau installé sur le **thread UI** : le callback lit directement `Accounts.Items`
+  (handles/ordre/exclusion) sans marshaling, synchrone (latence). Pré-filtre O(1) (set des bindings +
+  `InterceptionSuspended`) avant tout instantané/décision (RG-S06). Décision isolée dans `SwitchController` pur.
+- [DT-019] `AttachThreadInput` (repli d'activation) utilise `GetWindowThreadProcessId` pour l'**identifiant
+  de thread seul** — aucun `OpenProcess`/handle process : conforme C-02/C-03 (switching.md §3.x). `[WARN]`
+  de `NativeMethods` rescopé (prohibition d'inspection process = *reconnaissance*, PO-001).
 
 **Fichiers critiques — ne pas modifier sans discussion :**
 - `src/App/Interop/NativeMethods.cs` (contraintes C-02/C-03).
@@ -94,6 +109,30 @@
 ## Historique des Axes
 
 <!-- Une entrée par Axe complété. Ajoutée par /finalise. -->
+
+### Axe 6 — Interception & bascule de focus (cœur) (2026-09-24)
+
+**Périmètre livré :** décision pure `SwitchController` (gate focus DOFUS, rotation cyclique saut
+absents/exclus, activation directe — `docs/algos/rotation.md`) ; capture globale `InputHook`
+(`WH_KEYBOARD_LL`+`WH_MOUSE_LL`) ; activation `WindowActivator` (`SetForegroundWindow` + repli
+`AttachThreadInput`) ; `SwitchCoordinator` (pré-filtre + suspension). Couvre US-S01/S02/S03, RG-S01..S03/S06,
+C-01, CA-01/CA-02/CA-03.
+
+**Changements structurants :** `NativeMethods` étendu (hooks LL + activation ; `[WARN]` rescopé pour
+`GetWindowThreadProcessId` = thread id d'`AttachThreadInput`, conforme C-02). `MainViewModel` expose
+`BuildRotationSnapshot()` (thread UI). Composition root câble activator/controller/coordinator/hook, hook
+démarré après `Show()`, libéré `OnExit`. Ferme la boucle « capture (Axe 5) → décision → focus ».
+
+**Décisions :** [DT-017] gate focus par handle ; [DT-018] hook sur thread UI + pré-filtre O(1), décision
+pure isolée ; [DT-019] `AttachThreadInput` conforme C-02 (thread id seul).
+
+**Vérifications :** `dotnet build` Debug + Release 0/0 ; `dotnet test` 87/87 (14 nouveaux : CA-01 cycle,
+CA-03 absent sauté, exclu sauté, CA-02 non-DOFUS, C-01 consommé, directe même exclu, un seul présent,
+prev symétrique, coordinateur pré-filtre/suspension/routage). `dotnet publish -r win-x64` → `App.exe` (77 Mo).
+
+**Dette technique assumée :** hooks LL + activation réelle (focus, `AttachThreadInput`, latence < 100 ms)
+non testables unitairement → recette avec clients DOFUS réels. Suspension d'interception câblée (lue par
+le coordinateur) mais sans UI de bascule ni persistance déclenchée par l'utilisateur → onglet Réglages Axe 7.
 
 ### Axe 5 — Capture d'entrées & associations (2026-09-24)
 

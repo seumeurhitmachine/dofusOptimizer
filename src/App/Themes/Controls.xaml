@@ -22,11 +22,46 @@
         <Setter Property="FontSize" Value="13" />
     </Style>
 
-    <!-- Conteneur d'onglets : sans bordure ni fond clair par défaut. -->
+    <!-- Conteneur d'onglets : sans bordure ni fond clair par défaut.
+         [WPF] Le template par défaut du TabControl code en dur son TabPanel d'en-têtes et IGNORE la
+         propriété ItemsPanel. On réécrit donc le ControlTemplate pour héberger les en-têtes dans un
+         ItemsPresenter : l'ItemsPanel (UniformGrid 1 ligne) prend alors effet et répartit les onglets
+         sur toute la largeur, sans espace résiduel à droite. -->
     <Style TargetType="TabControl">
         <Setter Property="Background" Value="{StaticResource BackgroundBrush}" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Padding" Value="0" />
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <UniformGrid Rows="1" />
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabControl">
+                    <Grid Background="{TemplateBinding Background}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <!-- Bandeau d'en-têtes : plein largeur via l'ItemsPanel (UniformGrid). -->
+                        <ItemsPresenter Grid.Row="0" />
+
+                        <!-- Contenu de l'onglet sélectionné. -->
+                        <Border Grid.Row="1"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter ContentSource="SelectedContent" />
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- En-tête d'onglet : sombre, accent teal sur l'onglet actif (soulignement + texte). -->
@@ -38,10 +73,12 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TabItem">
+                    <!-- Léger contour par défaut (onglets non sélectionnés) ; l'onglet actif le remplace
+                         par le soulignement d'accent. -->
                     <Border x:Name="Root"
                             Background="{StaticResource BackgroundBrush}"
-                            BorderBrush="{StaticResource PrimaryBrush}"
-                            BorderThickness="0,0,0,0"
+                            BorderBrush="{StaticResource SurfaceAltBrush}"
+                            BorderThickness="1"
                             Padding="14,8">
                         <ContentPresenter ContentSource="Header"
                                           HorizontalAlignment="Center"
@@ -53,6 +90,7 @@
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="Root" Property="Background" Value="{StaticResource SurfaceBrush}" />
+                            <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
                             <Setter TargetName="Root" Property="BorderThickness" Value="0,0,0,2" />
                             <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}" />
                         </Trigger>

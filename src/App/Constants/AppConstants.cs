@@ -15,7 +15,7 @@ public static class AppConstants
     /// Titre visible de l'application (barre de fenêtre, info-bulle du tray). Texte centralisé
     /// (archi §Règles de constantes) — à extraire dans une <c>Strings</c> localisable si besoin.
     /// </summary>
-    public const string AppTitle = "Dofus Window Switcher";
+    public const string AppTitle = "Dofus Optimizer";
 
     /// <summary>Nom du fichier de configuration JSON.</summary>
     public const string ConfigFileName = "config.json";

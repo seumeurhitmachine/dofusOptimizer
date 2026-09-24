@@ -1,3 +1,4 @@
+using DofusSwitcher.Constants;
 using DofusSwitcher.Models;
 using DofusSwitcher.Services;
 
@@ -35,7 +36,7 @@ public sealed class MainViewModel : ObservableObject
     }
 
     /// <summary>Titre affiché dans la barre de la fenêtre.</summary>
-    public string Title => "Dofus Window Switcher";
+    public string Title => AppConstants.AppTitle;
 
     /// <summary>ViewModel de l'onglet Comptes : liste temps réel des comptes détectés/persistés.</summary>
     public AccountsViewModel Accounts { get; }

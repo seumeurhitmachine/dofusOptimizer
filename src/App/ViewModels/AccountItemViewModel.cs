@@ -12,6 +12,7 @@ public sealed class AccountItemViewModel : ObservableObject
     private bool _isConnected;
     private bool _isExcluded;
     private nint _handle;
+    private int _number;
 
     /// <summary>Crée l'item à partir d'un état de fusion.</summary>
     public AccountItemViewModel(AccountRuntimeState state)
@@ -42,6 +43,17 @@ public sealed class AccountItemViewModel : ObservableObject
     {
         get => _handle;
         private set => SetProperty(ref _handle, value);
+    }
+
+    /// <summary>
+    /// Numéro d'ordre de rotation (1-based) = position dans la liste persistée. Affiché à gauche du nom.
+    /// Sert aussi de clé de tri secondaire à la vue (comptes connectés en tête, puis par numéro croissant).
+    /// Piloté par <see cref="AccountsViewModel.Rebuild"/> ; indépendant de l'état connecté.
+    /// </summary>
+    public int Number
+    {
+        get => _number;
+        set => SetProperty(ref _number, value);
     }
 
     /// <summary>

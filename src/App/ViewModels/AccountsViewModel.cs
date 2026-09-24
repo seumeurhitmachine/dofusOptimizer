@@ -36,6 +36,7 @@ public sealed class AccountsViewModel : ObservableObject
         MoveUpCommand = new RelayCommand(() => MoveSelected(-1), () => CanMoveSelected(-1));
         MoveDownCommand = new RelayCommand(() => MoveSelected(+1), () => CanMoveSelected(+1));
         ToggleExcludeCommand = new RelayCommand(ToggleExcludeSelected, () => SelectedItem is not null);
+        ToggleExcludeItemCommand = new RelayCommand<AccountItemViewModel>(ToggleExclude);
 
         detector.AccountAppeared += OnAccountAppeared;
         detector.AccountDisappeared += OnAccountDisappeared;
@@ -66,6 +67,12 @@ public sealed class AccountsViewModel : ObservableObject
 
     /// <summary>Bascule l'exclusion du compte sélectionné (US-D04). Désactivée sans sélection.</summary>
     public RelayCommand ToggleExcludeCommand { get; }
+
+    /// <summary>
+    /// Bascule l'exclusion d'un compte donné (US-D04), porté par le bouton « œil » de sa ligne — cible
+    /// l'item passé en paramètre, indépendamment de la sélection courante.
+    /// </summary>
+    public RelayCommand<AccountItemViewModel> ToggleExcludeItemCommand { get; }
 
     /// <summary>
     /// Émis après une modification utilisateur (ordre/exclusion) avec la liste ordonnée à persister.
@@ -149,10 +156,14 @@ public sealed class AccountsViewModel : ObservableObject
 
     private void ToggleExcludeSelected()
     {
-        if (SelectedItem is null) return;
+        if (SelectedItem is not null) ToggleExclude(SelectedItem);
+    }
 
+    /// <summary>Bascule l'exclusion du compte donné (chemin partagé toolbar/sélection et bouton « œil » par ligne).</summary>
+    private void ToggleExclude(AccountItemViewModel item)
+    {
         MaterializeFromItems();
-        var index = _persisted.FindIndex(a => a.CharacterName == SelectedItem.CharacterName);
+        var index = _persisted.FindIndex(a => a.CharacterName == item.CharacterName);
         if (index < 0) return;
         _persisted[index] = _persisted[index] with { Excluded = !_persisted[index].Excluded };
         RebuildAndPersist();
@@ -207,6 +218,11 @@ public sealed class AccountsViewModel : ObservableObject
                 if (currentIndex != i) Items.Move(currentIndex, i);
             }
         }
+
+        // Numéro de rotation (1-based) = position dans la liste ; la vue regroupe les connectés en tête
+        // sans toucher à cet ordre (le tri d'affichage retombe sur Number, ref AccountsView.xaml).
+        for (var i = 0; i < Items.Count; i++)
+            Items[i].Number = i + 1;
 
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(HasItems));

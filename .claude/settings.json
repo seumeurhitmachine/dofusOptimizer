@@ -91,6 +91,20 @@
             "command": "lines=$(wc -l < \"$CLAUDE_FILE_PATHS\"); if [ $lines -gt 20 ]; then echo \"⚠ docs/agent/working-style.md : $lines lignes / max 20.\"; fi"
           }
         ]
+      },
+      {
+        "//": "Archi WPF : build après écriture d'un .cs",
+        "matcher": "Write(**/*.cs)",
+        "hooks": [
+          { "type": "command", "command": "cd $(git rev-parse --show-toplevel) && dotnet build --nologo --verbosity quiet 2>&1 | tail -20" }
+        ]
+      },
+      {
+        "//": "Archi WPF : build après écriture d'un .xaml",
+        "matcher": "Write(**/*.xaml)",
+        "hooks": [
+          { "type": "command", "command": "cd $(git rev-parse --show-toplevel) && dotnet build --nologo --verbosity quiet 2>&1 | tail -20" }
+        ]
       }
     ]
   }

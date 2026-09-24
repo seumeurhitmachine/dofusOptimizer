@@ -1,11 +1,12 @@
-CCTEMPLATE_VERSION=0.3.2
-INSTALLED_AT=2026-09-24T07:22:29Z
+CCTEMPLATE_VERSION=0.4
+INSTALLED_AT=2026-09-24T07:41:42Z
+UPDATED_FROM=0.3.2
 IA_TARGET=claude,codex
-ARCHI_ALIAS=
-ARCHI_FILE=
+ARCHI_ALIAS=wpf
+ARCHI_FILE=ARCHI-DOTNET-WPF.md
 SOURCE_VERSION_FILE=cctemplate/VERSION
 COMMON_PATH=cctemplate/common
 CLAUDE_AGENT_PATH=cctemplate/agents/claude
 CODEX_AGENT_PATH=cctemplate/agents/codex
 MANAGED_PATHS=.claude .codex AGENTS.md docs/agent/archis docs/init
-NOTES=v0.3.2 durcit les scripts bootstrap/update (preflight des dependances, trap ERR remontant l etape fautive, normalisation des chemins Windows, fallback d identite git)
+NOTES=v0.4 ajoute l archi ARCHI-DOTNET-WPF (outil desktop .NET 10 + WPF, MVVM manuel, P/Invoke Win32, System.Text.Json, single-file self-contained, zero NuGet)

@@ -3,7 +3,9 @@ using DofusSwitcher.ViewModels;
 // [WARN] UseWPF + UseWindowsForms exposent des types homonymes (UserControl, Point, MouseEventArgs,
 // DragEventArgs, DragDrop…). Alias explicites en faveur de WPF pour tout ce fichier.
 using UserControl = System.Windows.Controls.UserControl;
+using ListBox = System.Windows.Controls.ListBox;
 using ListBoxItem = System.Windows.Controls.ListBoxItem;
+using FilterEventArgs = System.Windows.Data.FilterEventArgs;
 using FrameworkElement = System.Windows.FrameworkElement;
 using DependencyObject = System.Windows.DependencyObject;
 using Point = System.Windows.Point;
@@ -59,12 +61,12 @@ public partial class AccountsView : UserControl
 
     private void AccountsList_Drop(object sender, DragEventArgs e)
     {
-        if (_draggedItem is null || DataContext is not AccountsViewModel vm) return;
+        if (_draggedItem is null || DataContext is not AccountsViewModel vm || sender is not ListBox list) return;
 
         var from = vm.Items.IndexOf(_draggedItem);
 
-        // Cible = compte survolé au lâcher ; à défaut (zone vide sous la liste), fin de liste.
-        var target = FindAncestor<ListBoxItem>(AccountsList.InputHitTest(e.GetPosition(AccountsList)) as DependencyObject);
+        // Cible = compte survolé au lâcher (dans la liste réceptrice) ; à défaut, fin de liste.
+        var target = FindAncestor<ListBoxItem>(list.InputHitTest(e.GetPosition(list)) as DependencyObject);
         var to = target?.DataContext is AccountItemViewModel dropOn
             ? vm.Items.IndexOf(dropOn)
             : vm.Items.Count - 1;
@@ -72,6 +74,13 @@ public partial class AccountsView : UserControl
         if (from >= 0 && to >= 0) vm.MoveItem(from, to);
         _draggedItem = null;
     }
+
+    // Filtres des deux vues : partitionnent Items en connectés (liste du haut) / déconnectés (bas).
+    private void Connected_Filter(object sender, FilterEventArgs e)
+        => e.Accepted = e.Item is AccountItemViewModel { IsConnected: true };
+
+    private void Disconnected_Filter(object sender, FilterEventArgs e)
+        => e.Accepted = e.Item is AccountItemViewModel { IsConnected: false };
 
     private static T? FindAncestor<T>(DependencyObject? current) where T : DependencyObject
     {

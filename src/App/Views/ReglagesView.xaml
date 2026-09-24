@@ -93,7 +93,7 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                     <TextBlock Text="Suspendre l'interception" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" />
-                    <TextBlock Text="Rend leur comportement natif à toutes les entrées"
+                    <TextBlock Text="Met en pause tous les raccourcis"
                                FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
                 </StackPanel>
                 <CheckBox Grid.Column="1"
@@ -110,8 +110,6 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                     <TextBlock Text="Démarrer avec Windows" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" />
-                    <TextBlock Text="Désactivé par défaut"
-                               FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
                 </StackPanel>
                 <CheckBox Grid.Column="1"
                           Style="{StaticResource ToggleSwitchStyle}"

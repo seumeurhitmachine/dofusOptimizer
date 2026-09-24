@@ -75,11 +75,8 @@ public sealed class SettingsViewModel : ObservableObject
         }
     }
 
-    /// <summary>Texte à-propos : version, chemin de config, rappel de non-interaction avec le jeu (C-02).</summary>
-    public string AboutText { get; } =
-        $"{AppConstants.AppTitle} · v{ResolveVersion()}\n" +
-        $"Config : {AppConstants.ConfigFilePath}\n" +
-        "N'interagit jamais avec le processus du jeu (fenêtres uniquement).";
+    /// <summary>Texte à-propos : nom de l'application et version.</summary>
+    public string AboutText { get; } = $"{AppConstants.AppTitle} · v{ResolveVersion()}";
 
     /// <summary>Message d'état après export/import (retour visuel discret) ; <c>null</c> si aucun.</summary>
     public string? StatusMessage

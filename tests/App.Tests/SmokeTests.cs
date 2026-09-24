@@ -14,7 +14,7 @@ public class SmokeTests
     {
         var vm = new MainViewModel(AppConfig.Default, new FakeWindowDetector(), new FakeInputCaptureService(null),
             new FakeStartupRegistryService(), new FakeFileDialogService());
-        Assert.Equal("Dofus Window Switcher", vm.Title);
+        Assert.Equal("Dofus Optimizer", vm.Title);
     }
 
     [Fact]

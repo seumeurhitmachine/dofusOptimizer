@@ -3,15 +3,18 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:DofusSwitcher.Views"
         mc:Ignorable="d"
         Title="{Binding Title}"
         Height="420" Width="480"
         MinHeight="360" MinWidth="420"
         WindowStartupLocation="CenterScreen">
 
-    <!-- Shell à onglets (ui-design.md §Navigation). Contenu des onglets vide à l'Axe 1. -->
+    <!-- Shell à onglets (ui-design.md §Navigation). Comptes câblé à l'Axe 3 ; Raccourcis/Réglages à venir. -->
     <TabControl>
-        <TabItem Header="Comptes" />
+        <TabItem Header="Comptes">
+            <views:AccountsView DataContext="{Binding Accounts}" />
+        </TabItem>
         <TabItem Header="Raccourcis" />
         <TabItem Header="Réglages" />
     </TabControl>

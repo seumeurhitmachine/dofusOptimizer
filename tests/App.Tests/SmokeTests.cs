@@ -12,7 +12,7 @@ public class SmokeTests
     [Fact]
     public void MainViewModel_ExposeSonTitre()
     {
-        var vm = new MainViewModel(AppConfig.Default);
+        var vm = new MainViewModel(AppConfig.Default, new FakeWindowDetector());
         Assert.Equal("Dofus Window Switcher", vm.Title);
     }
 

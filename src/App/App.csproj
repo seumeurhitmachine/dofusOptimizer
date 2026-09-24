@@ -12,6 +12,12 @@
     <!-- [DECISION] Namespace racine DofusSwitcher (l'assembly/exe reste App.exe via le nom de projet).
          Évite le conflit namespace==classe App qui casse le point d'entrée WPF généré. -->
     <RootNamespace>DofusSwitcher</RootNamespace>
+    <!-- [DECISION] Axe 3 : requis pour les pointeurs de fonction (delegate* unmanaged) et les
+         callbacks [UnmanagedCallersOnly] de la détection. [LibraryImport] ne marshale pas les
+         délégués (SYSLIB1051) ; les pointeurs de fonction sont la voie compatible source-gen.
+         Portée limitée à l'app (pas dans Directory.Build.props) : les tests restent sans unsafe.
+         Ce n'est pas une propriété de publication : hors périmètre « ne pas modifier ». -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>

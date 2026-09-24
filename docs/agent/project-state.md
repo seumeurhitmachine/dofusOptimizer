@@ -4,19 +4,25 @@
 
 > Mettre à jour à chaque /finalise. Max 30 lignes.
 
-**Dernier Axe complété :** Axe 2 — Persistance & modèle de config — 2026-09-24
-**Phase :** Axes initiaux en cours (Axe 2 livré, Axe 3 à démarrer)
+**Dernier Axe complété :** Axe 3 — Détection des fenêtres & comptes — 2026-09-24
+**Phase :** Axes initiaux en cours (Axe 3 livré, Axe 4 à démarrer)
 
 **Fonctionnalités actives :**
 - (aucune US — socle infra) Solution `.slnx` + `src/App` (WPF) + `tests/App.Tests` (xUnit).
 - Socle MVVM manuel (`ObservableObject`, `RelayCommand`), composition root `App.xaml.cs`
-  (`ShutdownMode.OnExplicitShutdown`). Fenêtre à onglets vides (Comptes/Raccourcis/Réglages),
-  thème sombre (`Themes/Colors.xaml` + `Controls.xaml`). `Interop/NativeMethods.cs` squelette.
+  (`ShutdownMode.OnExplicitShutdown`). Fenêtre à onglets (Comptes câblé, Raccourcis/Réglages vides),
+  thème sombre (`Themes/Colors.xaml` + `Controls.xaml`).
 - Publication vérifiée : `App.exe` single-file self-contained win-x64 démarre sans runtime.
 - **Persistance (US-P01/P02/P03)** : modèle `Binding`/`AccountConfig`/`AppConfig` (schemaVersion 1),
   `JsonConfigStore` (source-gen `AppJsonContext`, écriture atomique, corruption→backup+défaut,
   migration montante). Autosave débouncé (`ConfigAutosaveService`). Config chargée au démarrage
   et injectée au `MainViewModel`. Invariant d'unicité globale porté par `AppConfig.HasBindingConflicts()`.
+- **Détection (US-D01/D02)** : `IWindowDetector`/`WindowDetector` — `EnumWindows` initial +
+  `SetWinEventHook` (CREATE/DESTROY/NAMECHANGE), événementiel sans polling. Reconnaissance via
+  titre/classe `user32` seuls (`DofusWindowRecognizer`, extraction nom = fonction pure). Fusion
+  détectés/persistés par clé `characterName` (`AccountMerge`, pure), absents conservés. Onglet
+  Comptes temps réel (`AccountsViewModel` + `AccountItemViewModel` + `AccountsView`, lecture seule).
+  `NativeMethods` étendu (P/Invoke détection). Détecteur démarré après `window.Show()`, libéré `OnExit`.
 
 **Contraintes techniques actives :**
 - .NET 10 + WPF, MVVM manuel, **zéro NuGet** dans l'app, publish single-file self-contained.
@@ -40,6 +46,14 @@
   pas dans la VM racine : `MainViewModel` reste sans type WPF ni threading (découpage en couches).
 - [DT-007] `JsonConfigStore` accepte un chemin injectable (ctor `(string)`) pour la testabilité ;
   le ctor sans argument (`%APPDATA%`) reste le cas de production.
+- [DT-008] Interop détection via **pointeurs de fonction** `delegate* unmanaged[Stdcall]<…>` +
+  callbacks statiques `[UnmanagedCallersOnly]` : `[LibraryImport]` ne marshale pas les délégués
+  (SYSLIB1051). `SetWinEventHook` n'ayant pas de user-data, le callback route vers l'unique instance
+  via un champ statique (`WindowDetector` = singleton composition root). `<AllowUnsafeBlocks>` dans
+  `App.csproj` seul (les tests restent sans `unsafe`).
+- [DT-009] Vue runtime (`DetectedWindow`, `AccountRuntimeState`) séparée de la config persistée ;
+  fusion pure `AccountMerge` = foyer testable. Comptes détectés non persistés affichés au runtime
+  uniquement (aucune écriture config à cet Axe — gestion à l'Axe 4).
 
 **Fichiers critiques — ne pas modifier sans discussion :**
 - `src/App/Interop/NativeMethods.cs` (contraintes C-02/C-03).
@@ -51,6 +65,32 @@
 ## Historique des Axes
 
 <!-- Une entrée par Axe complété. Ajoutée par /finalise. -->
+
+### Axe 3 — Détection des fenêtres & comptes (2026-09-24)
+
+**Périmètre livré :** P/Invoke détection dans `NativeMethods` (`EnumWindows`, `GetWindowText(Length)`,
+`GetClassName`, `IsWindowVisible`, `SetWinEventHook`/`UnhookWinEvent`) ; `DofusWindowRecognizer`
+(critère fenêtre DOFUS + extraction nom, purs) ; `AccountMerge` (fusion pure détectés/persistés) ;
+`IWindowDetector`/`WindowDetector` (énumération initiale + WinEvent hook, marshaling Dispatcher) ;
+vues runtime `DetectedWindow`/`AccountRuntimeState` ; `AccountsViewModel`/`AccountItemViewModel` +
+`AccountsView` (onglet Comptes temps réel, lecture seule). Couvre US-D01/D02, RG-D01..D03/D05, C-02, PO-001.
+
+**Changements structurants :** `NativeMethods` passe de squelette à premier point interop réel
+(contraintes C-02/C-03 respectées : aucune inspection process) ; composition root instancie et démarre
+le détecteur après `window.Show()`, le libère `OnExit` ; `MainViewModel(config, detector)` compose
+désormais `AccountsViewModel`.
+
+**Décisions :** [DT-008] pointeurs de fonction + `[UnmanagedCallersOnly]` (contournement SYSLIB1051)
+avec routage par champ statique (singleton), `AllowUnsafeBlocks` limité à l'app ; [DT-009] séparation
+vue runtime / config persistée, fusion pure testable, comptes détectés non persistés en runtime seul.
+Critère fenêtre DOFUS fondé sur le motif de titre `" - Dofus"` (classe = signal secondaire relâché).
+
+**Vérifications :** `dotnet build` 0 erreur / 0 warning ; `dotnet test` 37/37 (extraction nom, critère
+fenêtre DOFUS, fusion apparition/disparition/conservation hors ligne/ordre, câblage VM Comptes) ;
+`dotnet publish -r win-x64` single-file OK (pointeurs de fonction compatibles ReadyToRun).
+
+**Dette technique assumée :** fonctionnement réel non testable unitairement (exige des clients DOFUS
+ouverts) → à couvrir en recette. Réordonnancement/exclusion/persistance des comptes détectés → Axe 4.
 
 ### Axe 2 — Persistance & modèle de config (2026-09-24)
 

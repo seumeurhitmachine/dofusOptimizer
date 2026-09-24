@@ -19,6 +19,7 @@ namespace DofusSwitcher;
 public partial class App : Application
 {
     private ConfigAutosaveService? _autosave;
+    private IWindowDetector? _windowDetector;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -32,21 +33,28 @@ public partial class App : Application
         IConfigStore configStore = new JsonConfigStore();
         var config = configStore.Load();
 
-        // 2. Services : autosave débouncé adossé au store (timer créé sur le thread UI).
+        // 2. Services : autosave débouncé + détecteur de fenêtres (instanciés sur le thread UI).
         _autosave = new ConfigAutosaveService(configStore);
+        _windowDetector = new WindowDetector();
 
-        // 3. ViewModel racine : reçoit la config ; ses modifications futures alimentent l'autosave.
-        var mainViewModel = new MainViewModel(config);
+        // 3. ViewModel racine : reçoit la config et le détecteur ; le VM Comptes s'abonne dès ici,
+        //    avant Start, pour capter l'énumération initiale.
+        var mainViewModel = new MainViewModel(config, _windowDetector);
         mainViewModel.ConfigChanged += _autosave.Notify;
 
         // 4. Fenêtre principale.
         var window = new MainWindow { DataContext = mainViewModel };
         window.Show();
+
+        // 5. Détection : démarrée après Show() pour que le hook OUTOFCONTEXT poste ses événements
+        //    dans la file de messages du thread UI déjà en pompe (archi §Threading, RG-D05).
+        _windowDetector.Start();
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
-        // Flush d'un éventuel instantané en attente avant de quitter, puis arrêt du timer.
+        // Libérer le hook natif puis flusher un éventuel instantané en attente avant de quitter.
+        _windowDetector?.Dispose();
         _autosave?.Dispose();
         base.OnExit(e);
     }

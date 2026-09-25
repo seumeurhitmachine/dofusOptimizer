@@ -1,4 +1,6 @@
+using System.Threading;
 using System.Windows;
+using DofusSwitcher.Constants;
 using DofusSwitcher.Persistence;
 using DofusSwitcher.Services;
 using DofusSwitcher.Tray;
@@ -24,6 +26,11 @@ public partial class App : Application
     private IInputHook? _inputHook;
     // [WARN] Référence forte au tray : sinon le GC collecte le NotifyIcon et l'icône disparaît (RG-T06).
     private TrayIconController? _tray;
+    // Instance unique (Axe 9) : le mutex détient l'unicité, l'événement réveille l'instance en cours.
+    private Mutex? _instanceMutex;
+    private EventWaitHandle? _showEvent;
+    private RegisteredWaitHandle? _showRegistration;
+    private MainWindow? _window;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -33,6 +40,21 @@ public partial class App : Application
         // plus le process (RG-T01) — elle est masquée. La sortie réelle passe par « Quitter » du menu tray,
         // qui appelle Application.Shutdown() (déclenche OnExit : unhook + flush autosave + Dispose tray).
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+        // 0. Instance unique (Axe 9) : si l'app tourne déjà, réveiller sa fenêtre et quitter immédiatement
+        //    (avant toute création de service/fenêtre/hook) plutôt que d'ouvrir un 2ᵉ process.
+        _showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, AppConstants.ShowWindowEventName);
+        _instanceMutex = new Mutex(initiallyOwned: true, AppConstants.SingleInstanceMutexName, out var isFirstInstance);
+        if (!isFirstInstance)
+        {
+            _showEvent.Set();   // demande à l'instance en cours d'afficher sa fenêtre
+            Shutdown();         // OnExit libère les objets kernel (aucun autre service créé ici)
+            return;
+        }
+
+        // Réveil déclenché par une 2ᵉ instance : afficher la fenêtre sur le thread UI (callback threadpool).
+        _showRegistration = ThreadPool.RegisterWaitForSingleObject(
+            _showEvent, (_, _) => Dispatcher.Invoke(ShowMainWindow), state: null, Timeout.Infinite, executeOnlyOnce: false);
 
         // 1. Persistance : charger la config en tête (fichier absent/corrompu → défaut sans crash).
         IConfigStore configStore = new JsonConfigStore();
@@ -55,11 +77,10 @@ public partial class App : Application
         IInputCaptureService inputCapture = new InputCaptureService();
         // Sortie réelle (« Terminer session », bouton « Fermer l'application ») : poser ForceClose AVANT
         // Shutdown() sinon MainWindow.OnClosing l'annule quand « fermer minimise » est actif ; Shutdown()
-        // déclenche OnExit (unhook + flush + dispose tray). La fenêtre est capturée (assignée plus bas).
-        Views.MainWindow? window = null;
+        // déclenche OnExit (unhook + flush + dispose tray). La fenêtre (_window) est assignée plus bas.
         Action requestShutdown = () =>
         {
-            if (window is not null) window.ForceClose = true;
+            if (_window is not null) _window.ForceClose = true;
             Current.Shutdown();
         };
         var mainViewModel = new MainViewModel(config, _windowDetector, inputCapture, startup, fileDialog,
@@ -76,14 +97,23 @@ public partial class App : Application
         _inputHook = new InputHook(coordinator.Handle);
 
         // 5. Fenêtre principale + tray (référence forte gardée par App, archi §Composition root).
-        window = new MainWindow { DataContext = mainViewModel };
-        _tray = new TrayIconController(window, mainViewModel);
-        window.Show();
+        _window = new MainWindow { DataContext = mainViewModel };
+        _tray = new TrayIconController(_window, mainViewModel);
+        _window.Show();
 
         // 6. Détection puis hooks : démarrés après Show() pour que les callbacks OUTOFCONTEXT / bas niveau
         //    soient servis par la file de messages du thread UI déjà en pompe (archi §Threading, RG-D05/S06).
         _windowDetector.Start();
         _inputHook.Start();
+    }
+
+    /// <summary>Affiche et active la fenêtre principale (réveil par une 2ᵉ instance). Sur le thread UI.</summary>
+    private void ShowMainWindow()
+    {
+        if (_window is null) return;
+        _window.Show();
+        _window.WindowState = WindowState.Normal;
+        _window.Activate();
     }
 
     protected override void OnExit(ExitEventArgs e)
@@ -93,6 +123,10 @@ public partial class App : Application
         _windowDetector?.Dispose();
         _tray?.Dispose();
         _autosave?.Dispose();
+        // Instance unique : retirer l'attente puis libérer les objets kernel (le mutex relâche l'unicité).
+        _showRegistration?.Unregister(waitObject: null);
+        _showEvent?.Dispose();
+        _instanceMutex?.Dispose();
         base.OnExit(e);
     }
 }

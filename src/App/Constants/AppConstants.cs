@@ -93,4 +93,12 @@ public static class AppConstants
     /// <summary>Filtre de la boîte de dialogue de sélection de l'exécutable du launcher (Réglages, Axe 9).</summary>
     public const string LauncherFileDialogFilter =
         "Ankama Launcher (Ankama Launcher.exe)|Ankama Launcher.exe|Exécutables (*.exe)|*.exe|Tous les fichiers (*.*)|*.*";
+
+    // --- Instance unique (Axe 9) : objets kernel nommés (namespace session, isolés par utilisateur). ---
+
+    /// <summary>Nom du mutex garantissant une seule instance ; le GUID évite toute collision avec un autre programme.</summary>
+    public const string SingleInstanceMutexName = "DofusOptimizer.SingleInstance.{6C2F1A94-2D7B-4E52-9A1F-DF0B1E3C77A2}";
+
+    /// <summary>Nom de l'événement signalé par une 2ᵉ instance pour réveiller/afficher la fenêtre de l'instance en cours.</summary>
+    public const string ShowWindowEventName = "DofusOptimizer.ShowWindow.{6C2F1A94-2D7B-4E52-9A1F-DF0B1E3C77A2}";
 }

@@ -75,7 +75,8 @@ est `GameAccount` (nom historique conservé pour la compat JSON `accounts`, ref 
   l'application » (visible si CloseMinimizes) ; sortie réelle pose `ForceClose` avant `Shutdown`. Ligne d'ajout
   de compte **dépliable** (bouton +, repliée au changement d'onglet). Tray « Ouvrir la configuration » → « Ouvrir ».
   Exe renommé **`DofusOptimizer.exe`** (`AssemblyName`). Version **1.1.0**. `schemaVersion 2→3` (migration force
-  `CloseMinimizes=true` pour préserver le comportement tray). Nouveau brush `TextOnAccentBrush`.
+  `CloseMinimizes=true` pour préserver le comportement tray). Nouveau brush `TextOnAccentBrush`. **Instance unique** :
+  mutex nommé + `EventWaitHandle` — relancer l'app réveille la fenêtre existante (`App.ShowMainWindow`) au lieu d'un 2ᵉ process.
 
 **Contraintes techniques actives :**
 - .NET 10 + WPF, MVVM manuel, **zéro NuGet** dans l'app, publish single-file self-contained.
@@ -209,8 +210,12 @@ cycle de vie piloté par config + défaut `CloseMinimizes` porté par la migrati
 end-session, chemin configuré prioritaire ; migration v3 + round-trip ; add-account dépliable ; switches persistés ;
 quit). `dotnet publish -r win-x64` → `DofusOptimizer.exe` single-file. `docs/data-model.md` mis à jour (schemaVersion 3).
 
+**Instance unique :** mutex nommé (`AppConstants.SingleInstanceMutexName`) acquis en tête d'`OnStartup` ; une 2ᵉ instance
+signale un `EventWaitHandle` nommé et quitte immédiatement — l'instance en cours affiche sa fenêtre (`ShowMainWindow`,
+via `RegisterWaitForSingleObject` → `Dispatcher.Invoke`). Objets kernel libérés en `OnExit`.
+
 **Dette technique assumée :** comportements fenêtre/tray réels (fermer=minimise, minimiser=barre d'état, restauration,
-kill/launch réels) non testables unitairement → recette. Détection du launcher ouvert **hors app** sans client :
+instance unique, kill/launch réels) non testables unitairement → recette. Détection du launcher ouvert **hors app** sans client :
 réévaluée seulement au prochain événement fenêtre (pas de polling, anti-bot) → le CTA peut rester visible entre-temps.
 
 ### Axe 8 — Comptes ↔ Personnages (évolution, 2026-09-24)

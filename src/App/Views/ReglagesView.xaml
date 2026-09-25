@@ -76,6 +76,30 @@
             </Setter>
         </Style>
 
+        <!-- Bouton « Soutenir » : accent teal, texte blanc (mise en avant du lien de soutien Ko-fi). -->
+        <Style x:Key="SupportButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource TextOnAccentBrush}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Padding" Value="14,6" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root" Background="{StaticResource PrimaryBrush}" CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{StaticResource PrimaryHoverBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Ligne d'option : libellé + sous-titre à gauche, interrupteur à droite. -->
         <Style x:Key="OptionRowStyle" TargetType="Grid">
             <Setter Property="Margin" Value="0,0,0,12" />
@@ -148,105 +172,7 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="12">
 
-            <!-- Suspendre l'interception (US-T02). -->
-            <Grid Style="{StaticResource OptionRowStyle}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                    <TextBlock Text="Suspendre l'interception" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" />
-                    <TextBlock Text="Met en pause tous les raccourcis"
-                               FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
-                </StackPanel>
-                <CheckBox Grid.Column="1"
-                          Style="{StaticResource ToggleSwitchStyle}"
-                          IsChecked="{Binding IsInterceptionSuspended}"
-                          AutomationProperties.Name="Suspendre l'interception" />
-            </Grid>
-
-            <!-- Démarrer avec Windows (US-T04, off par défaut). -->
-            <Grid Style="{StaticResource OptionRowStyle}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                    <TextBlock Text="Démarrer avec Windows" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" />
-                </StackPanel>
-                <CheckBox Grid.Column="1"
-                          Style="{StaticResource ToggleSwitchStyle}"
-                          IsChecked="{Binding StartWithWindows}"
-                          AutomationProperties.Name="Démarrer avec Windows" />
-            </Grid>
-
-            <!-- Fermer [X] minimise l'application (Axe 9). Si off, [X] quitte réellement le processus. -->
-            <Grid Style="{StaticResource OptionRowStyle}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                    <TextBlock Text="Fermer [X] l'application la minimise" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" />
-                    <TextBlock Text="Sinon, fermer termine le processus"
-                               FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
-                </StackPanel>
-                <CheckBox Grid.Column="1"
-                          Style="{StaticResource ToggleSwitchStyle}"
-                          IsChecked="{Binding CloseMinimizes}"
-                          AutomationProperties.Name="Fermer minimise l'application" />
-            </Grid>
-
-            <!-- Minimiser dans la barre d'état (Axe 9). Complémentaire : les deux activés → [X] minimise en barre d'état. -->
-            <Grid Style="{StaticResource OptionRowStyle}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                    <TextBlock Text="Minimiser dans la barre d'état" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" />
-                    <TextBlock Text="Réduit dans la zone de notification plutôt que la barre des tâches"
-                               FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
-                </StackPanel>
-                <CheckBox Grid.Column="1"
-                          Style="{StaticResource ToggleSwitchStyle}"
-                          IsChecked="{Binding MinimizeToTray}"
-                          AutomationProperties.Name="Minimiser dans la barre d'état" />
-            </Grid>
-
-            <!-- Bouton « Fermer l'application » : utile seulement quand [X] minimise (sinon [X] quitte déjà). -->
-            <Button Style="{StaticResource ActionButtonStyle}" HorizontalAlignment="Left" Margin="0,0,0,12"
-                    Content="Fermer l'application" Command="{Binding QuitApplicationCommand}"
-                    Visibility="{Binding CloseMinimizes, Converter={StaticResource BoolToVisibility}}" />
-
-            <Border Margin="0,0,0,12" BorderBrush="{StaticResource SurfaceAltBrush}" BorderThickness="0,1,0,0" />
-
-            <!-- Chemin de l'Ankama Launcher (Axe 9). Vide = auto-détection ; si aucun chemin utilisable, le
-                 bouton « Ouvrir une session » de l'onglet Comptes est masqué. -->
-            <StackPanel Margin="0,0,0,12">
-                <TextBlock Text="Ankama Launcher" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" />
-                <TextBlock Text="Chemin de l'exécutable"
-                           FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"
-                           Margin="0,0,0,4" />
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <TextBox Grid.Column="0"
-                             Style="{StaticResource DarkTextBoxStyle}"
-                             Text="{Binding LauncherPath, UpdateSourceTrigger=LostFocus}"
-                             AutomationProperties.Name="Chemin de l'Ankama Launcher" />
-                    <Button Grid.Column="1"
-                            Style="{StaticResource ActionButtonStyle}"
-                            Margin="6,0,0,0"
-                            Content="Parcourir…"
-                            Command="{Binding BrowseLauncherCommand}" />
-                </Grid>
-            </StackPanel>
-
-            <Border Margin="0,4,0,12" BorderBrush="{StaticResource SurfaceAltBrush}" BorderThickness="0,1,0,0" />
-
+            <!-- ================= Section « Compte » (en premier) ================= -->
             <!-- Gestion des comptes (Axe 8, US-C01/C02/C03). En-tête + bouton « + » qui déplie la création. -->
             <Grid Margin="0,0,0,8">
                 <Grid.ColumnDefinitions>
@@ -361,8 +287,117 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
+            <!-- Aide affichée quand aucun compte n'existe encore. -->
+            <TextBlock Text="Grouper les personnages par compte pour conserver l'ordre et les raccourcis en changeant de personnage."
+                       FontSize="11" TextWrapping="Wrap" Margin="2,2,0,4"
+                       Foreground="{StaticResource TextSecondaryBrush}"
+                       Visibility="{Binding HasNoAccounts, Converter={StaticResource BoolToVisibility}}" />
+
             <Border Margin="0,8,0,12" BorderBrush="{StaticResource SurfaceAltBrush}" BorderThickness="0,1,0,0" />
 
+            <!-- ================= Section « Réglages » (interrupteurs) ================= -->
+            <TextBlock Text="Réglages"
+                       FontSize="13" FontWeight="SemiBold" Margin="0,0,0,10"
+                       Foreground="{StaticResource TextPrimaryBrush}" />
+
+            <!-- Suspendre l'interception (US-T02). -->
+            <Grid Style="{StaticResource OptionRowStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="Suspendre l'interception" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" />
+                    <TextBlock Text="Met en pause tous les raccourcis"
+                               FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                </StackPanel>
+                <CheckBox Grid.Column="1"
+                          Style="{StaticResource ToggleSwitchStyle}"
+                          IsChecked="{Binding IsInterceptionSuspended}"
+                          AutomationProperties.Name="Suspendre l'interception" />
+            </Grid>
+
+            <!-- Démarrer avec Windows (US-T04, off par défaut). -->
+            <Grid Style="{StaticResource OptionRowStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="Démarrer avec Windows" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" />
+                </StackPanel>
+                <CheckBox Grid.Column="1"
+                          Style="{StaticResource ToggleSwitchStyle}"
+                          IsChecked="{Binding StartWithWindows}"
+                          AutomationProperties.Name="Démarrer avec Windows" />
+            </Grid>
+
+            <!-- Fermer [X] minimise l'application (Axe 9). Si off, [X] quitte réellement le processus. -->
+            <Grid Style="{StaticResource OptionRowStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="Fermer [X] l'application la minimise" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" />
+                    <TextBlock Text="Sinon, fermer termine le processus"
+                               FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                </StackPanel>
+                <CheckBox Grid.Column="1"
+                          Style="{StaticResource ToggleSwitchStyle}"
+                          IsChecked="{Binding CloseMinimizes}"
+                          AutomationProperties.Name="Fermer minimise l'application" />
+            </Grid>
+
+            <!-- Minimiser dans la barre d'état (Axe 9). Complémentaire : les deux activés → [X] minimise en barre d'état. -->
+            <Grid Style="{StaticResource OptionRowStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="Minimiser dans la barre d'état" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" />
+                    <TextBlock Text="Réduit dans la zone de notification plutôt que la barre des tâches"
+                               FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                </StackPanel>
+                <CheckBox Grid.Column="1"
+                          Style="{StaticResource ToggleSwitchStyle}"
+                          IsChecked="{Binding MinimizeToTray}"
+                          AutomationProperties.Name="Minimiser dans la barre d'état" />
+            </Grid>
+
+            <!-- Bouton « Fermer l'application » : utile seulement quand [X] minimise (sinon [X] quitte déjà). -->
+            <Button Style="{StaticResource ActionButtonStyle}" HorizontalAlignment="Left" Margin="0,0,0,12"
+                    Content="Fermer l'application" Command="{Binding QuitApplicationCommand}"
+                    Visibility="{Binding CloseMinimizes, Converter={StaticResource BoolToVisibility}}" />
+
+            <!-- Chemin de l'Ankama Launcher (Axe 9). Vide = auto-détection ; si aucun chemin utilisable, le
+                 bouton « Ouvrir une session » de l'onglet Comptes est masqué. -->
+            <StackPanel Margin="0,0,0,12">
+                <TextBlock Text="Ankama Launcher" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" />
+                <TextBlock Text="Chemin de l'exécutable"
+                           FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"
+                           Margin="0,0,0,4" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0"
+                             Style="{StaticResource DarkTextBoxStyle}"
+                             Text="{Binding LauncherPath, UpdateSourceTrigger=LostFocus}"
+                             AutomationProperties.Name="Chemin de l'Ankama Launcher" />
+                    <Button Grid.Column="1"
+                            Style="{StaticResource ActionButtonStyle}"
+                            Margin="6,0,0,0"
+                            Content="Parcourir…"
+                            Command="{Binding BrowseLauncherCommand}" />
+                </Grid>
+            </StackPanel>
+
+            <Border Margin="0,4,0,12" BorderBrush="{StaticResource SurfaceAltBrush}" BorderThickness="0,1,0,0" />
+
+            <!-- ================= Section « Configuration » ================= -->
             <!-- Export / import de la configuration (US-P04). -->
             <TextBlock Text="Configuration"
                        FontSize="13" FontWeight="SemiBold"
@@ -391,10 +426,19 @@
 
             <Border Margin="0,12" BorderBrush="{StaticResource SurfaceAltBrush}" BorderThickness="0,1,0,0" />
 
-            <!-- À propos. -->
-            <TextBlock Text="{Binding AboutText}"
-                       FontSize="11" TextWrapping="Wrap"
-                       Foreground="{StaticResource TextSecondaryBrush}" />
+            <!-- À propos : version à gauche, bouton « Soutenir » (Ko-fi) à droite. -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="{Binding AboutText}"
+                           FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"
+                           Foreground="{StaticResource TextSecondaryBrush}" />
+                <Button Grid.Column="1" Style="{StaticResource SupportButtonStyle}"
+                        Content="Soutenir" Command="{Binding SupportCommand}"
+                        ToolTip="Soutenir le développement sur Ko-fi" />
+            </Grid>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

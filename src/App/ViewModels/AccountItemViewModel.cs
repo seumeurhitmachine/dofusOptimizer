@@ -14,6 +14,7 @@ public sealed class AccountItemViewModel : ObservableObject
     private nint _handle;
     private int _number;
     private string? _accountName;
+    private bool _isDragging;
 
     /// <summary>Crée l'item à partir d'un état de fusion.</summary>
     public AccountItemViewModel(AccountRuntimeState state)
@@ -55,6 +56,17 @@ public sealed class AccountItemViewModel : ObservableObject
     {
         get => _number;
         set => SetProperty(ref _number, value);
+    }
+
+    /// <summary>
+    /// Vrai pendant que cet item est glissé (prévisualisation du réordonnancement). Purement transient et
+    /// vue-only (jamais persisté) : pilote l'opacité « fantôme » de la ligne via un trigger XAML. Positionné
+    /// par le code-behind DnD autour de <c>DragDrop.DoDragDrop</c>.
+    /// </summary>
+    public bool IsDragging
+    {
+        get => _isDragging;
+        set => SetProperty(ref _isDragging, value);
     }
 
     /// <summary>Nom du compte lié (v2), ou <c>null</c> si non lié. Pilote la répartition en 3 zones.</summary>

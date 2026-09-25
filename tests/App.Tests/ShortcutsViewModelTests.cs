@@ -109,7 +109,7 @@ public class ShortcutsViewModelTests
         var (vm, emitted) = Build(config, f1);
 
         var slot = Assert.Single(vm.Shortcuts.DirectSlots);
-        Assert.Equal("Compte1", slot.Label); // personnage non connecté → repli sur le nom du compte
+        Assert.Equal("Compte1", slot.Label); // libellé = nom du compte (entrée unique du compte)
 
         slot.CaptureCommand.Execute(null);
 
@@ -120,8 +120,9 @@ public class ShortcutsViewModelTests
     }
 
     [Fact]
-    public void ActivationDirecte_AfficheLePersonnageConnecteDuCompte()
+    public void ActivationDirecte_AfficheLeNomDuCompte_QuelQueSoitLePersonnageConnecte()
     {
+        // Une seule entrée par compte, affichée par le NOM DU COMPTE (identique pour tous ses personnages).
         var config = AppConfig.Default with
         {
             GameAccounts = [new GameAccount("Compte1")],
@@ -131,11 +132,11 @@ public class ShortcutsViewModelTests
         var vm = new MainViewModel(config, detector, new FakeInputCaptureService(null),
             new FakeStartupRegistryService(), new FakeFileDialogService());
 
-        Assert.Equal("Compte1", Assert.Single(vm.Shortcuts.DirectSlots).Label); // aucun connecté → nom du compte
+        Assert.Equal("Compte1", Assert.Single(vm.Shortcuts.DirectSlots).Label);
 
         detector.RaiseAppeared("Iop", 1);
 
-        Assert.Equal("Iop", Assert.Single(vm.Shortcuts.DirectSlots).Label); // connecté → nom du personnage
+        Assert.Equal("Compte1", Assert.Single(vm.Shortcuts.DirectSlots).Label); // inchangé une fois connecté
     }
 
     [Fact]

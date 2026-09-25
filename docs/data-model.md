@@ -100,8 +100,12 @@ partout où il apparaît.
 - Un personnage est **conservé même absent** : la présence en config est indépendante
   de l'existence d'une fenêtre (état `connecté/absent` calculé au runtime, **non
   persisté**).
-- `excluded = true` ⇒ retiré de la rotation mais conservé et réactivable (EF-09).
-- `directBinding` optionnel ; s'il est présent, soumis à l'unicité globale.
+- `excluded = true` ⇒ retiré de la rotation mais conservé et réactivable (EF-09). Vaut aussi pour un
+  personnage **sans compte** (Axe 10) : la rotation intègre tout personnage connecté, lié ou non.
+- `directBinding` optionnel ; s'il est présent, soumis à l'unicité globale. **Actif pour les personnages
+  non liés** (`accountName = null`, Axe 10) : porte leur activation directe. Pour un personnage lié,
+  l'activation directe est portée par le compte (`GameAccount.DirectBinding`, [DT-025]) ; au moment du lien,
+  un `directBinding` de personnage est **transféré au compte** s'il n'en a pas, sinon effacé ([DT-029]).
 - `accountName` optionnel : nom d'un `GameAccount` existant (RG-C02) ou `null` (non lié).
   Lien établi **manuellement** (RG-C06). Ne remet pas en cause l'ordre de rotation (RG-C05).
 
@@ -160,3 +164,4 @@ partout où il apparaît.
 | Axe 5 | 2026-09-24 | Encodage `Binding.Code` pour `MouseButton` étendu à toute la souris (gauche=3, droit=4, milieu=5 ; XButton1/2=1/2 inchangés). Aucun champ ni schemaVersion modifié (valeurs de `code` élargies). Encodage/formatage centralisés dans `InputCapture`. |
 | Axe 8 | 2026-09-24 | **schemaVersion 1 → 2**. Nouvelle entité `GameAccount` (compte) dans `appConfig.gameAccounts` ; lien nullable `accountConfig.accountName` (personnage→compte). Migration montante additive (v1 sans `gameAccounts` → liste vide, personnages non liés). Terminologie clarifiée : `AccountConfig` = personnage. |
 | Axe 9 | 2026-09-25 | **schemaVersion 2 → 3**. Cycle de session/vie : `appConfig.launcherPath` (nullable, chemin Ankama Launcher), `closeMinimizes` (défaut `true`), `minimizeToTray` (défaut `false`). Migration montante : configs < v3 → `closeMinimizes` forcé `true` (préserve le comportement tray). Aucune entité modifiée. |
+| Axe 10 | 2026-09-25 | **Aucun changement de schéma** (schemaVersion inchangée). Réactivation comportementale de `accountConfig.directBinding` pour les personnages **non liés** (activation directe portée par le personnage) ; transfert au compte au moment du lien ([DT-029]). Déjà couvert par l'unicité globale (`AllBindings`). |

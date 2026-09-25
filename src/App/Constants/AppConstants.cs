@@ -101,4 +101,7 @@ public static class AppConstants
 
     /// <summary>Nom de l'événement signalé par une 2ᵉ instance pour réveiller/afficher la fenêtre de l'instance en cours.</summary>
     public const string ShowWindowEventName = "DofusOptimizer.ShowWindow.{6C2F1A94-2D7B-4E52-9A1F-DF0B1E3C77A2}";
+
+    /// <summary>Lien de soutien (Ko-fi) ouvert par le bouton « Soutenir » de l'onglet Paramètres.</summary>
+    public const string SupportUrl = "https://ko-fi.com/seumeurhitmatchine";
 }

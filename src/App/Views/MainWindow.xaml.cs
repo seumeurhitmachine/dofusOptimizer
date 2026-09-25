@@ -54,13 +54,29 @@ public partial class MainWindow : Window
         base.OnClosing(e);
     }
 
-    /// <summary>Minimiser [_] : masque dans la barre d'état si l'option est active, sinon minimisation classique.</summary>
+    /// <summary>Minimiser [_] : masque dans la barre d'état si l'option est active, sinon minimisation classique.
+    /// Reflète aussi l'état agrandi/restauré sur le glyphe du bouton du bandeau personnalisé.</summary>
     protected override void OnStateChanged(EventArgs e)
     {
         if (WindowState == WindowState.Minimized && Settings?.MinimizeToTray == true)
             Hide(); // retiré de la barre des tâches ; le tray reste le point d'accès
+        // Icône vectorielle : agrandir (carré) ↔ restaurer (double carré).
+        var maximized = WindowState == WindowState.Maximized;
+        MaximizeIcon.Data = (System.Windows.Media.Geometry)FindResource(
+            maximized ? "CaptionRestoreGeometry" : "CaptionMaximizeGeometry");
+        MaximizeButton.ToolTip = maximized ? "Restaurer" : "Agrandir";
         base.OnStateChanged(e);
     }
+
+    /// <summary>Bouton « réduire » du bandeau personnalisé.</summary>
+    private void MinimizeButton_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
+    /// <summary>Bouton « agrandir / restaurer » du bandeau personnalisé.</summary>
+    private void MaximizeButton_Click(object sender, RoutedEventArgs e) =>
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+
+    /// <summary>Bouton « fermer » du bandeau : passe par <see cref="OnClosing"/> (respecte « fermer minimise »).</summary>
+    private void CloseButton_Click(object sender, RoutedEventArgs e) => Close();
 
     private void MinimizeWindow(bool toTray)
     {

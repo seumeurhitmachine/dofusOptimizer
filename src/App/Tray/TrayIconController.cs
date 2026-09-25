@@ -23,7 +23,9 @@ namespace DofusSwitcher.Tray;
 public sealed class TrayIconController : IDisposable
 {
     private const string OpenLabel = "Ouvrir";
-    private const string SuspendLabel = "Suspendre l'interception";
+    // Libellé d'action du menu, dynamique selon l'état : proposer l'inverse de l'état courant.
+    private const string EnableShortcutsLabel = "Activer les raccourcis";
+    private const string DisableShortcutsLabel = "Désactiver les raccourcis";
     private const string QuitLabel = "Quitter";
 
     private readonly Window _window;
@@ -39,9 +41,9 @@ public sealed class TrayIconController : IDisposable
         _settings = mainViewModel.Settings;
 
         _trayIcon = LoadTrayIcon();
-        _suspendItem = new WinForms.ToolStripMenuItem(SuspendLabel, image: null, (_, _) => ToggleSuspended())
+        _suspendItem = new WinForms.ToolStripMenuItem(DisableShortcutsLabel, image: null, (_, _) => ToggleSuspended())
         {
-            CheckOnClick = false, // l'état vient de la config (source unique), pas du clic
+            CheckOnClick = false, // le libellé (action) reflète l'état, pas une case à cocher
         };
 
         _icon = new WinForms.NotifyIcon
@@ -83,11 +85,12 @@ public sealed class TrayIconController : IDisposable
 
     private void ToggleSuspended() => _settings.IsInterceptionSuspended = !_settings.IsInterceptionSuspended;
 
-    /// <summary>Reflète l'état suspendu : case cochée du menu + info-bulle de l'icône (RG-T02).</summary>
+    /// <summary>Reflète l'état suspendu : libellé d'action du menu (Activer si désactivés, sinon Désactiver) +
+    /// info-bulle de l'icône (RG-T02).</summary>
     private void UpdateSuspendedVisual()
     {
         var suspended = _settings.IsInterceptionSuspended;
-        _suspendItem.Checked = suspended;
+        _suspendItem.Text = suspended ? EnableShortcutsLabel : DisableShortcutsLabel;
         _icon.Text = suspended ? $"{AppConstants.AppTitle} — suspendu" : $"{AppConstants.AppTitle} — actif";
     }
 

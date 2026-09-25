@@ -16,6 +16,10 @@
   - `RotationSlot` = `{ characterName, handle, isConnected, isExcluded }`.
   - **Éligible** (rotation) ssi `isConnected && !isExcluded && handle != 0` (`IsRotatable`).
   - L'ordre des `slots` **est** l'ordre de rotation (data-model §AppConfig).
+  - Les `slots` couvrent **tous** les personnages (`AppConfig.Accounts`), qu'ils soient liés à un compte
+    ou non : un personnage **sans compte** connecté est un participant de plein droit (Axe 10, [DT-029]).
+  - `directs` agrège l'activation directe **par compte** (`GameAccount.DirectBinding` → perso lié connecté,
+    [DT-025]) **et par personnage** pour les non liés (`AccountConfig.DirectBinding` → ce perso, Axe 10).
 - `input` : entrée captée (`Binding`).
 - `foreground` : HWND de la fenêtre au premier plan.
 
@@ -71,3 +75,4 @@ revient au premier présent (CA-01). Un compte absent au milieu est ignoré (CA-
 | Axe | Date | Modification |
 |---|---|---|
 | Axe 6 | 2026-09-24 | Création : décision d'interception + rotation cyclique (saut absents/exclus), activation directe. |
+| Axe 10 | 2026-09-25 | Précision : les `slots` et `directs` intègrent les personnages **sans compte** (participants de plein droit ; activation directe portée par le personnage). Algorithme inchangé. |

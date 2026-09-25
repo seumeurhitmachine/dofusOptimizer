@@ -31,14 +31,17 @@ public sealed class MainViewModel : ObservableObject
         Action? requestShutdown = null)
     {
         Config = config;
-        Accounts = new AccountsViewModel(config.Accounts, detector, config.GameAccounts, session, requestShutdown);
+        // `SetAccountDirectBinding` injecté : le transfert du raccourci direct au lien d'un perso sans compte
+        // (Axe 10) écrit côté compte via le seul writer des GameAccounts (MainViewModel).
+        Accounts = new AccountsViewModel(config.Accounts, detector, config.GameAccounts, session, requestShutdown,
+            SetAccountDirectBinding);
         Accounts.SetLauncherPath(config.LauncherPath); // chemin de launcher persisté (Axe 9)
         // Réordonnancement/exclusion/liaison (Axe 4/8) → maj de la config → autosave débouncé (ref [DT-006]).
         Accounts.AccountsChanged += OnAccountsChanged;
-        // Raccourcis (Axe 5/8) : suivant/précédent top-level ici, activation directe liée au COMPTE
-        // (le libellé suit le personnage connecté du compte, fourni par AccountsViewModel).
+        // Raccourcis (Axe 5/8/10) : suivant/précédent top-level ici, activation directe liée au COMPTE (Axe 8,
+        // libellé = nom du compte) OU au PERSONNAGE pour les persos sans compte (Axe 10, chemin Accounts.SetDirectBinding).
         Shortcuts = new ShortcutsViewModel(config, capture, SetNextBinding, SetPrevBinding,
-            SetAccountDirectBinding, Accounts.ConnectedCharacterOf);
+            SetAccountDirectBinding, Accounts.SetDirectBinding, Accounts.ConnectedUnlinkedCharacters);
         Accounts.RuntimeChanged += Shortcuts.OnRuntimeChanged; // connexion/déconnexion → libellés directs à jour
         // Réglages (Axe 7/8) : suspension + démarrage Windows + export/import + CRUD comptes, remontés ici (seul writer).
         Settings = new SettingsViewModel(config, startup, fileDialog, SetInterceptionSuspended, SetStartWithWindows,
@@ -79,6 +82,16 @@ public sealed class MainViewModel : ObservableObject
             var connected = Accounts.Items.FirstOrDefault(i =>
                 i.IsConnected && i.AccountName is not null && NameEquals(i.AccountName, game.Name));
             directs[game.DirectBinding] = connected?.Handle ?? 0;
+        }
+
+        // Activation directe par PERSONNAGE pour les persos SANS compte (Axe 10) : portée par
+        // AccountConfig.DirectBinding → HWND du personnage connecté (0 sinon). Les persos liés sont ignorés
+        // ici (leur activation directe est portée par le compte ; le binding perso est effacé au lien).
+        foreach (var character in Config.Accounts)
+        {
+            if (character.AccountName is not null || character.DirectBinding is null) continue;
+            var connected = Accounts.Items.FirstOrDefault(i => i.IsConnected && i.CharacterName == character.CharacterName);
+            directs[character.DirectBinding] = connected?.Handle ?? 0;
         }
 
         return new RotationSnapshot(slots, Config.NextBinding, Config.PrevBinding, directs);

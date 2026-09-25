@@ -25,6 +25,7 @@ public sealed class AccountsViewModel : ObservableObject
     private readonly Dictionary<string, DetectedWindow> _detected = new(StringComparer.Ordinal);
     private readonly ISessionProcessService? _session;
     private readonly Action? _requestShutdown;
+    private readonly Action<string, Binding?>? _applyAccountDirectBinding;
     private List<AccountConfig> _persisted;
     private List<GameAccount> _gameAccounts;
     private AccountItemViewModel? _selectedItem;
@@ -33,6 +34,7 @@ public sealed class AccountsViewModel : ObservableObject
     private string? _configuredLauncherPath;
     private string? _launcherPath;
     private bool _launcherResolved;
+    private bool _reorderPending;
 
     /// <summary>
     /// Câble le VM sur les comptes persistés et le détecteur. L'abonnement précède <see cref="IWindowDetector.Start"/>
@@ -44,12 +46,14 @@ public sealed class AccountsViewModel : ObservableObject
         IWindowDetector detector,
         IReadOnlyList<GameAccount>? gameAccounts = null,
         ISessionProcessService? session = null,
-        Action? requestShutdown = null)
+        Action? requestShutdown = null,
+        Action<string, Binding?>? applyAccountDirectBinding = null)
     {
         _persisted = [.. persisted];
         _gameAccounts = [.. gameAccounts ?? []];
         _session = session;
         _requestShutdown = requestShutdown;
+        _applyAccountDirectBinding = applyAccountDirectBinding;
         MoveUpCommand = new RelayCommand(() => MoveSelected(-1), () => CanMoveSelected(-1));
         MoveDownCommand = new RelayCommand(() => MoveSelected(+1), () => CanMoveSelected(+1));
         ToggleExcludeCommand = new RelayCommand(ToggleExcludeSelected, () => SelectedItem is not null);
@@ -63,13 +67,15 @@ public sealed class AccountsViewModel : ObservableObject
         Rebuild(); // état initial : comptes persistés, tous absents tant que rien n'est détecté.
     }
 
-    /// <summary>Zone 1 — comptes ayant un personnage lié actuellement connecté (compte + personnage).</summary>
-    public ObservableCollection<ConnectedAccountViewModel> ConnectedAccounts { get; } = [];
+    /// <summary>
+    /// Liste unifiée des personnages actuellement connectés (Axe 10, [DT-029]), liés ou non, dans l'ordre
+    /// de rotation (ordre de <see cref="Items"/>). Fusionne les anciennes zones 1 (comptes connectés) et 2
+    /// (personnages sans compte) : tout personnage connecté est un participant de plein droit (glisser,
+    /// exclusion, activation directe) ; une ligne non liée porte en plus l'affordance de liaison.
+    /// </summary>
+    public ObservableCollection<ConnectedRowViewModel> ConnectedRows { get; } = [];
 
-    /// <summary>Zone 2 — personnages connectés non rattachés à un compte (avec action de liaison).</summary>
-    public ObservableCollection<UnlinkedCharacterViewModel> UnlinkedConnected { get; } = [];
-
-    /// <summary>Zone 3 — noms des comptes ayant des personnages liés mais aucun connecté (nom seul).</summary>
+    /// <summary>Zone du bas — noms des comptes ayant des personnages liés mais aucun connecté (nom seul).</summary>
     public ObservableCollection<string> DisconnectedAccounts { get; } = [];
 
     /// <summary>Comptes disponibles pour la liaison (sans personnage lié connecté, RG-C03) — partagée par les lignes de zone 2.</summary>
@@ -78,9 +84,12 @@ public sealed class AccountsViewModel : ObservableObject
     /// <summary>Émis après recomposition des zones (changement d'état runtime) — l'onglet Raccourcis rafraîchit ses libellés.</summary>
     public event Action? RuntimeChanged;
 
-    /// <summary>Nom du personnage lié actuellement connecté pour un compte donné, ou <c>null</c> si aucun (activation directe, Axe 8).</summary>
-    public string? ConnectedCharacterOf(string accountName) =>
-        ConnectedAccounts.FirstOrDefault(c => string.Equals(c.AccountName, accountName, StringComparison.OrdinalIgnoreCase))?.Character.CharacterName;
+    /// <summary>
+    /// Noms des personnages actuellement connectés et <b>non liés</b> à un compte (Axe 10), dans l'ordre de
+    /// rotation. Pilotent les emplacements d'activation directe « sans compte » de l'onglet Raccourcis.
+    /// </summary>
+    public IReadOnlyList<string> ConnectedUnlinkedCharacters() =>
+        ConnectedRows.Where(r => !r.IsLinked).Select(r => r.Character.CharacterName).ToList();
 
     /// <summary>Comptes affichés, ordonnés (ordre persistant puis détectés non persistés en fin).</summary>
     public ObservableCollection<AccountItemViewModel> Items { get; } = [];
@@ -91,13 +100,10 @@ public sealed class AccountsViewModel : ObservableObject
     /// <summary>Inverse de <see cref="IsEmpty"/> : pilote la visibilité de la liste (converter in-box, sans inversion).</summary>
     public bool HasItems => Items.Count > 0;
 
-    /// <summary>Zone 1 non vide (au moins un compte connecté) — pilote la visibilité de la section.</summary>
-    public bool HasConnected => ConnectedAccounts.Count > 0;
+    /// <summary>Liste des connectés non vide (au moins un personnage connecté) — pilote la visibilité de la section.</summary>
+    public bool HasConnected => ConnectedRows.Count > 0;
 
-    /// <summary>Zone 2 non vide (au moins un personnage connecté sans compte).</summary>
-    public bool HasUnlinked => UnlinkedConnected.Count > 0;
-
-    /// <summary>Zone 3 non vide (au moins un compte déconnecté à personnages liés).</summary>
+    /// <summary>Zone du bas non vide (au moins un compte déconnecté à personnages liés).</summary>
     public bool HasDisconnected => DisconnectedAccounts.Count > 0;
 
     /// <summary>Vrai si au moins un client DOFUS est actuellement connecté (Axe 9) — pilote « Terminer session ».</summary>
@@ -170,6 +176,77 @@ public sealed class AccountsViewModel : ObservableObject
         _persisted.RemoveAt(from);
         _persisted.Insert(to, moved);
         RebuildAndPersist();
+    }
+
+    /// <summary>
+    /// Prévisualise le réordonnancement pendant le glisser : réinsère l'item glissé juste avant ou après
+    /// la cible (<paramref name="insertAfter"/> = moitié basse de la ligne survolée) et rafraîchit les zones,
+    /// <b>sans</b> matérialiser ni persister. La ligne glissée occupe alors visuellement l'emplacement cible
+    /// (rendue « fantôme » par <see cref="AccountItemViewModel.IsDragging"/>) et les autres se décalent.
+    /// [DECISION] Règle d'insertion stable (destination = index d'insertion ajusté du retrait) pour éviter
+    /// l'oscillation quand on survole une même ligne — le déplacement n'a lieu qu'au franchissement du milieu.
+    /// [WARN] Réordonne <see cref="Items"/> en place ; l'ordre n'est figé qu'au lâcher via <see cref="CommitReorder"/>.
+    /// Un glisser annulé est rétabli par <see cref="CancelReorder"/> (l'ordre persisté n'a pas bougé).
+    /// </summary>
+    public void PreviewReorder(AccountItemViewModel dragged, AccountItemViewModel target, bool insertAfter)
+    {
+        if (ReferenceEquals(dragged, target)) return;
+
+        // [DECISION] Fluidité du glisser (Axe 10) : on déplace les DEUX collections EN PLACE
+        // (ObservableCollection.Move → les conteneurs WPF sont conservés, pas de reconstruction ni de
+        // clignotement), au lieu de recomposer toutes les zones à chaque franchissement. ConnectedRows porte
+        // l'affichage ; Items porte l'ordre de rotation persisté (figé au lâcher par CommitReorder).
+        var rowFrom = IndexOfRow(dragged);
+        var rowTo = IndexOfRow(target);
+        if (rowFrom < 0 || rowTo < 0) return;
+        var rowInsertAt = insertAfter ? rowTo + 1 : rowTo;
+        var rowDest = rowFrom < rowInsertAt ? rowInsertAt - 1 : rowInsertAt;
+        if (rowDest == rowFrom || rowDest < 0 || rowDest >= ConnectedRows.Count) return;
+
+        ConnectedRows.Move(rowFrom, rowDest);
+
+        // Même déplacement dans Items (indices globaux — Items contient aussi les personnages absents).
+        var itemFrom = Items.IndexOf(dragged);
+        var itemTarget = Items.IndexOf(target);
+        if (itemFrom >= 0 && itemTarget >= 0)
+        {
+            var itemInsertAt = insertAfter ? itemTarget + 1 : itemTarget;
+            var itemDest = itemFrom < itemInsertAt ? itemInsertAt - 1 : itemInsertAt;
+            if (itemDest != itemFrom && itemDest >= 0 && itemDest < Items.Count) Items.Move(itemFrom, itemDest);
+        }
+
+        _reorderPending = true;
+    }
+
+    /// <summary>Index d'une ligne connectée par identité de personnage (le DnD raisonne en <see cref="AccountItemViewModel"/>).</summary>
+    private int IndexOfRow(AccountItemViewModel character)
+    {
+        for (var i = 0; i < ConnectedRows.Count; i++)
+            if (ReferenceEquals(ConnectedRows[i].Character, character)) return i;
+        return -1;
+    }
+
+    /// <summary>
+    /// Fige l'ordre prévisualisé au lâcher (glisser-déposer) : matérialise l'ordre visible et persiste,
+    /// via le même chemin que <see cref="MoveItem"/>. No-op si aucun déplacement n'a eu lieu (lâcher sur place).
+    /// </summary>
+    public void CommitReorder()
+    {
+        if (!_reorderPending) return;
+        _reorderPending = false;
+        MaterializeFromItems();
+        RebuildAndPersist();
+    }
+
+    /// <summary>
+    /// Rétablit l'ordre d'origine si le glisser est annulé (Échap, lâcher hors cible). L'ordre persisté
+    /// n'ayant pas été touché, <see cref="Rebuild"/> restaure <see cref="Items"/> depuis <c>_persisted</c>.
+    /// </summary>
+    public void CancelReorder()
+    {
+        if (!_reorderPending) return;
+        _reorderPending = false;
+        Rebuild();
     }
 
     /// <summary>
@@ -323,19 +400,17 @@ public sealed class AccountsViewModel : ObservableObject
         AvailableAccounts.Clear();
         foreach (var name in zones.AvailableAccounts) AvailableAccounts.Add(name);
 
-        // Zone 1 ordonnée par ordre de rotation (ordre de Items), pas par ordre de déclaration des comptes.
-        var connectedByChar = zones.Connected.ToDictionary(z => z.ConnectedCharacter, StringComparer.Ordinal);
-        ConnectedAccounts.Clear();
+        // Liste unifiée « connectés » (Axe 10) ordonnée par l'ordre de rotation (ordre de Items) : lignes
+        // liées (compte + perso) et non liées (perso + liaison) mêlées, chacune de plein droit ([DT-029]).
+        var accountByChar = zones.Connected.ToDictionary(z => z.ConnectedCharacter, z => z.AccountName, StringComparer.Ordinal);
+        var unlinked = new HashSet<string>(zones.UnlinkedConnected, StringComparer.Ordinal);
+        ConnectedRows.Clear();
         foreach (var item in Items)
-            if (connectedByChar.TryGetValue(item.CharacterName, out var z))
-                ConnectedAccounts.Add(new ConnectedAccountViewModel(z.AccountName, item));
-
-        UnlinkedConnected.Clear();
-        foreach (var name in zones.UnlinkedConnected)
         {
-            var character = Items.FirstOrDefault(i => i.CharacterName == name);
-            if (character is not null)
-                UnlinkedConnected.Add(new UnlinkedCharacterViewModel(character, AvailableAccounts, LinkCharacter));
+            if (accountByChar.TryGetValue(item.CharacterName, out var accountName))
+                ConnectedRows.Add(new ConnectedRowViewModel(accountName, item));
+            else if (unlinked.Contains(item.CharacterName))
+                ConnectedRows.Add(new ConnectedRowViewModel(item, AvailableAccounts, LinkCharacter));
         }
 
         DisconnectedAccounts.Clear();
@@ -343,7 +418,6 @@ public sealed class AccountsViewModel : ObservableObject
             DisconnectedAccounts.Add(z.AccountName);
 
         OnPropertyChanged(nameof(HasConnected));
-        OnPropertyChanged(nameof(HasUnlinked));
         OnPropertyChanged(nameof(HasDisconnected));
         RefreshSessionState();
         RuntimeChanged?.Invoke();
@@ -432,9 +506,27 @@ public sealed class AccountsViewModel : ObservableObject
         MaterializeFromItems();
         var index = _persisted.FindIndex(a => a.CharacterName == characterName);
         if (index < 0) return;
-        _persisted[index] = _persisted[index] with { AccountName = accountName };
+        var current = _persisted[index];
+
+        Binding? transferToAccount = null;
+        if (accountName is not null && current.DirectBinding is not null)
+        {
+            // [DECISION] Au lien, l'activation directe passe de portée-personnage (Axe 10, non lié) à
+            // portée-compte ([DT-025]/[DT-029]) : on transfère l'entrée au compte s'il n'en a pas encore,
+            // sinon on l'efface simplement. L'unicité globale garantit l'absence de conflit dans les deux cas.
+            var account = _gameAccounts.FirstOrDefault(a => NameEquals(a.Name, accountName));
+            if (account is not null && account.DirectBinding is null) transferToAccount = current.DirectBinding;
+            current = current with { DirectBinding = null };
+        }
+
+        _persisted[index] = current with { AccountName = accountName };
         RebuildAndPersist();
+
+        // Écriture du DirectBinding côté compte via le seul writer des GameAccounts (MainViewModel).
+        if (transferToAccount is not null) _applyAccountDirectBinding?.Invoke(accountName!, transferToAccount);
     }
+
+    private static bool NameEquals(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
 
     private void RaiseCommandStates()
     {

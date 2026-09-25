@@ -15,7 +15,7 @@
     <RootNamespace>DofusSwitcher</RootNamespace>
     <AssemblyName>DofusOptimizer</AssemblyName>
     <!-- Version applicative (affichée dans l'à-propos via Assembly.GetName().Version). -->
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <!-- [DECISION] Axe 3 : requis pour les pointeurs de fonction (delegate* unmanaged) et les
          callbacks [UnmanagedCallersOnly] de la détection. [LibraryImport] ne marshale pas les
          délégués (SYSLIB1051) ; les pointeurs de fonction sont la voie compatible source-gen.
@@ -27,6 +27,8 @@
   <ItemGroup>
     <!-- Icône embarquée en ressource : réutilisée par la fenêtre et le NotifyIcon (tray, Axe 7). -->
     <Resource Include="Resources/app.ico" />
+    <!-- Logo vectoriel rastérisé (PNG transparent) : affiché dans le bandeau personnalisé de la fenêtre. -->
+    <Resource Include="Resources/logo.png" />
   </ItemGroup>
 
 </Project>

@@ -5,6 +5,46 @@ Toutes les évolutions notables de Dofus Optimizer sont consignées dans ce fich
 Le format s'appuie sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
+## [1.1.0] - 2026-09-25
+
+Distinction Compte/Personnage, ouverture et fermeture des clients depuis
+l'application, et comportements de fenêtre configurables.
+
+### Added
+
+- **Comptes ↔ Personnages** : notion de **Compte** (nom libre) distincte du
+  **personnage** (fenêtre détectée), avec liaison manuelle personnage → compte.
+  Onglet Comptes réorganisé en 3 zones (comptes connectés · personnages connectés
+  sans compte · comptes déconnectés). Gestion des comptes dans les Réglages :
+  créer, supprimer (cascade sur les personnages liés), liste dépliable des
+  personnages liés. Activation directe désormais **portée par le compte**.
+- **Ouvrir une session** : bouton lançant l'Ankama Launcher lorsqu'aucun client
+  n'est ouvert ; chemin de l'exécutable **configurable** dans les Réglages
+  (auto-détection par défaut, bouton masqué si aucun chemin utilisable).
+- **Fermer les clients** : croix rouge par client connecté (fermeture forcée) et
+  bouton « Terminer session » (ferme tous les clients puis quitte l'application).
+- **Comportements de fenêtre** (Réglages) : « Fermer [X] l'application la
+  minimise » et « Minimiser dans la barre d'état » (complémentaires), bouton
+  « Fermer l'application », bouton « + » pour déplier la création de compte.
+- **Instance unique** : relancer l'application réveille la fenêtre existante au
+  lieu d'ouvrir un second processus.
+
+### Changed
+
+- Menu de la zone de notification : « Ouvrir la configuration » → « Ouvrir ».
+- Exécutable renommé **`DofusOptimizer.exe`**.
+- Fermer la fenêtre suit le réglage « Fermer minimise » (activé par défaut : le
+  comportement tray historique est préservé pour les configurations existantes).
+- Barre de défilement sombre appliquée globalement.
+
+### Note
+
+- Les interactions avec les **processus** DOFUS (lancer le launcher, fermer un
+  client) sont volontaires et bornées : l'application n'injecte rien, ne lit pas
+  la mémoire et n'interagit pas avec le jeu — la reconnaissance reste fondée sur
+  les seules API fenêtres `user32`.
+- Les configurations existantes sont migrées automatiquement (aucune action requise).
+
 ## [1.0.0] - 2026-09-24
 
 Première version. Bascule rapide entre clients DOFUS, pilotée au clavier/souris,

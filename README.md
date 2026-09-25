@@ -4,11 +4,13 @@ Bascule rapide entre plusieurs clients DOFUS, pilotée au clavier et à la souri
 L'application n'interagit jamais avec le processus du jeu : elle s'appuie
 exclusivement sur les API fenêtres Windows (`user32`).
 
-**Version courante : 1.0.0** — 2026-09-24
+**Version courante : 1.1.0** — 2026-09-25
 
 ## Fonctionnalités
 
 - Détection temps réel des clients DOFUS ouverts.
+- Distinction **Compte** / **personnage** : liaison manuelle personnage → compte,
+  onglet Comptes en 3 zones, gestion des comptes dans les Réglages.
 - Rotation cyclique *suivant*/*précédent* entre les comptes, avec saut des comptes
   absents ou exclus.
 - Activation directe d'un compte par un raccourci dédié.
@@ -16,6 +18,10 @@ exclusivement sur les API fenêtres Windows (`user32`).
   auxiliaires inclus).
 - Interception conditionnée au focus d'un client DOFUS (aucun effet ailleurs).
 - Réordonnancement et exclusion des comptes.
+- **Ouverture/fermeture des clients** : lancer l'Ankama Launcher, fermer un client
+  ou terminer la session, sans jamais interagir avec le jeu lui-même.
+- **Comportements de fenêtre** configurables (fermer minimise, minimiser dans la
+  barre d'état) et **instance unique** (relancer réveille la fenêtre existante).
 - Icône de zone de notification (tray) : suspendre/réactiver, ouvrir, quitter.
 - Suspension globale, démarrage avec Windows (optionnel), export/import de la
   configuration.
@@ -36,6 +42,9 @@ dotnet watch --project src/App/App.csproj
 
 # Lancer les tests
 dotnet test tests/App.Tests/App.Tests.csproj
+
+# Publier l'exécutable autonome (single-file) → DofusOptimizer.exe
+dotnet publish src/App -c Release -r win-x64
 ```
 
 La configuration est stockée dans

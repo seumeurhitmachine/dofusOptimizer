@@ -87,6 +87,7 @@ public sealed class SettingsViewModel : ObservableObject
         CreateAccountCommand = new RelayCommand(CreateAccount);
         ShowAddAccountCommand = new RelayCommand(() => IsAddAccountVisible = true);
         QuitApplicationCommand = new RelayCommand(() => _requestShutdown?.Invoke());
+        SupportCommand = new RelayCommand(OpenSupportLink);
         RebuildAccountRows();
     }
 
@@ -167,6 +168,25 @@ public sealed class SettingsViewModel : ObservableObject
     /// <summary>Texte à-propos : nom de l'application et version.</summary>
     public string AboutText { get; } = $"{AppConstants.AppTitle} · v{ResolveVersion()}";
 
+    /// <summary>Ouvre la page de soutien (Ko-fi) dans le navigateur par défaut.</summary>
+    public RelayCommand SupportCommand { get; }
+
+    private static void OpenSupportLink()
+    {
+        // UseShellExecute : délègue l'ouverture de l'URL au navigateur par défaut (aucune interaction jeu/process cible).
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(AppConstants.SupportUrl)
+            {
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            // Aucun navigateur associé : échec silencieux (le soutien est facultatif).
+        }
+    }
+
     /// <summary>Message d'état après export/import (retour visuel discret) ; <c>null</c> si aucun.</summary>
     public string? StatusMessage
     {
@@ -192,6 +212,9 @@ public sealed class SettingsViewModel : ObservableObject
 
     /// <summary>Comptes déclarés (Axe 8) — lignes avec renommage et suppression (cascade).</summary>
     public ObservableCollection<GameAccountRowViewModel> GameAccounts { get; } = [];
+
+    /// <summary>Vrai si aucun compte n'est déclaré : affiche le texte d'aide sous la section « Compte ».</summary>
+    public bool HasNoAccounts => GameAccounts.Count == 0;
 
     /// <summary>Nom saisi pour créer un nouveau compte (US-C01).</summary>
     public string NewAccountName
@@ -254,6 +277,7 @@ public sealed class SettingsViewModel : ObservableObject
                 .ToList();
             GameAccounts.Add(new GameAccountRowViewModel(account.Name, linked, _deleteAccount, _deleteCharacter));
         }
+        OnPropertyChanged(nameof(HasNoAccounts));
     }
 
     /// <summary>

@@ -1,31 +1,31 @@
-# Axe 9 : Cycle de session & de vie — launcher, fermeture des clients, comportements fenêtre
+# Axe 10 : Personnages sans compte de plein droit dans la rotation
 
-refs: docs/data-model.md §AppConfig, docs/agent/project-state.md §État courant, docs/agent/archis/ARCHI-DOTNET-WPF.md §MVVM manuel/§Threading/§Composition root/§Interop, src/App/Interop/NativeMethods.cs, src/App/Services/ISessionProcessService.cs, src/App/ViewModels/AccountsViewModel.cs, src/App/ViewModels/SettingsViewModel.cs, src/App/ViewModels/MainViewModel.cs, src/App/Views/AccountsView.xaml, src/App/Views/ReglagesView.xaml, src/App/Views/MainWindow.xaml.cs, src/App/App.xaml.cs, src/App/Themes/Colors.xaml
+refs: src/App/ViewModels/AccountsViewModel.cs §RebuildZones/§SetDirectBinding/§LinkCharacter, src/App/ViewModels/MainViewModel.cs §BuildRotationSnapshot, src/App/ViewModels/ShortcutsViewModel.cs §SyncDirectSlots/§Assignments, src/App/ViewModels/UnlinkedCharacterViewModel.cs, src/App/ViewModels/ConnectedAccountViewModel.cs, src/App/Views/AccountsView.xaml, src/App/Views/AccountsView.xaml.cs, docs/data-model.md §AccountConfig, docs/algos/rotation.md, docs/agent/project-state.md [DT-025][DT-026]
 date: 2026-09-25
 
 ## tasks
-- [x] PID depuis HWND — `NativeMethods.cs` — surcharge `GetWindowThreadProcessId(out uint)` + `GetProcessIdFromWindow` (fenêtre→PID, **aucun** OpenProcess) ; `[ARCH]` exception C-02 [DT-027]
-- [x] Service session — `ISessionProcessService` + `SessionProcessService` — `IsLauncherRunning`, `ResolveLauncherPath(configuredPath)` (config prime, sinon `%LOCALAPPDATA%\Programs\Ankama Launcher\…` + registre `App Paths`, sélection pure testable), `LaunchLauncher(path)`, `KillByHandle(hwnd)`. Fakable [DT-023]
-- [x] Onglet Comptes — `AccountsViewModel` — `OpenSessionCommand` (visible ssi 0 client connecté ET launcher absent ET chemin résolu), `CloseClientCommand` par ligne connectée (zones 1&2), `EndSessionCommand` (kill tous + `Action` shutdown). Sans type WPF ; `SetLauncherPath` réévalue le gating
-- [x] Chemin launcher configurable — `AppConfig.LauncherPath` (persisté) + champ + « Parcourir… » (`ReglagesView`) ; masqué si aucun chemin utilisable
-- [x] Cycle de vie fenêtre — `AppConfig.CloseMinimizes` (défaut true) + `MinimizeToTray` + switches Réglages ; `MainWindow.OnClosing`/`OnStateChanged` (fermer minimise/quitte, minimiser en barre d'état) ; bouton « Fermer l'application » (visible si CloseMinimizes) ; sortie réelle pose `ForceClose` avant `Shutdown`
-- [x] Ajout compte dépliable — `SettingsViewModel.IsAddAccountVisible` + `ShowAddAccountCommand` (idempotent) ; replié au changement d'onglet (`MainWindow.OnTabChanged`)
-- [x] Migration v2→v3 — `JsonConfigStore.Migrate` — configs < v3 → `CloseMinimizes` forcé true (préserve le tray)
-- [x] Divers — tray « Ouvrir la configuration » → « Ouvrir » ; exe → `DofusOptimizer.exe` (`AssemblyName`) ; version 1.1.0
-- [x] Tests — `tests/App.Tests/` — service (résolution/gating/kill/end session), chemin configuré prioritaire, migration v3 + round-trip, add-account dépliable, switches persistés, quit
+- [ ] Liste connectés unifiée — `AccountsViewModel.RebuildZones` — fusionner zones 1&2 en une collection ordonnée par `Items` (liés + non liés) ; chaque ligne porte `Character` (œil/croix/DnD) + `AccountName?` + affordance liaison ; zone 3 (déconnectés) inchangée
+- [ ] Ligne unifiée — VM de ligne connectée unique (refonte/fusion `ConnectedAccountViewModel`/`UnlinkedCharacterViewModel`) exposant `Character`, `AccountName?`, `AvailableAccounts`, `SelectedAccount`, `LinkCommand`, `CanLink`
+- [ ] Template unique — `AccountsView.xaml` — un seul `ItemsControl`+`DataTemplate` : poignée ☰ + œil + croix pour tous ; bloc « compte : X » **ou** combo+« Lier » via `DataTrigger` sur `AccountName`
+- [ ] Masquer « Lier » — `AccountsView.xaml` + ligne VM — `Visibility` du bouton liée à `SelectedAccount is not null` (aujourd'hui seulement grisé par `LinkCommand.CanExecute`)
+- [ ] DnD toutes lignes — `AccountsView.xaml.cs` — `Handle_*`/`Row_DragOver` résolvent `.Character` de la ligne unifiée (retirer le cast strict `ConnectedAccountViewModel`) ; `MoveItem`/`PreviewReorder` opèrent déjà sur indices globaux `Items`
+- [ ] Directs sans compte (snapshot) — `MainViewModel.BuildRotationSnapshot` — ajouter aux `directs` les `AccountConfig.DirectBinding` des persos connectés **sans** compte (aujourd'hui boucle `GameAccounts` seule)
+- [ ] Directs sans compte (raccourcis) — `ShortcutsViewModel` — slot direct par perso connecté sans compte (clé=`characterName`, apply via nouveau chemin `Accounts.SetDirectBinding`) + inclusion dans `Assignments()` (conflit RG-S05)
+- [ ] Transfert au lien — `AccountsViewModel.LinkCharacter` (ou `MainViewModel`) — `AccountConfig.DirectBinding` non nul → transféré au compte s'il n'en a pas, sinon effacé [DECISION]
+- [ ] Tests — `tests/App.Tests/` — liste unifiée ordonnée, snapshot inclut direct d'un perso sans compte, conflit direct refusé, transfert/effacement au lien, gating visibilité « Lier », non-régression rotation next/prev sur non liés
+- [ ] Docs — `docs/data-model.md` (réactivation `AccountConfig.DirectBinding` pour non liés) + `docs/algos/rotation.md` (slots incluent les non liés) + `project-state.md` [DT-029]
 
 ## constraints
-- **Exception C-02 assumée [DT-027]** : `Process.Start` (launcher) + `Process.Kill` (clients) SEULES interactions process ; aucune injection/mémoire/entrée synthétique (C-03)/lecture du jeu. PID via API fenêtre, pas d'`OpenProcess` d'inspection
-- `AccountsViewModel`/`SettingsViewModel` sans WPF/Dispatcher : shutdown via `Action` injectée, process derrière interface fakable [DT-023]
-- Sortie réelle ⇒ `MainWindow.ForceClose = true` AVANT `Shutdown()` (sinon `OnClosing` l'annule quand « fermer minimise »)
-- Aucune valeur HEX hors `Themes/Colors.xaml` (`PrimaryBrush`/`ErrorBrush`/`TextOnAccentBrush`)
-- schemaVersion 2 → **3** ; migration montante idempotente ; l'initialiseur `init` ne survit pas au source-gen → défaut porté par la migration — ref [DT-002]
+- **Aucun bump `schemaVersion`** : `Excluded` et `AccountConfig.DirectBinding` existent et sont déjà dans l'unicité (`AppConfig.AllBindings`). Purement comportemental + UI
+- Amende **[DT-025]** (directe portée par le compte) et **[DT-026]** (DnD zone 1 seule) → nouveau **[DT-029]** : directe **par perso** pour les non liés (`AccountConfig.DirectBinding`), **par compte** pour les liés (`GameAccount.DirectBinding`, inchangé) ; DnD sur toute la liste connectés
+- VM sans type WPF/Dispatcher ; DnD = code-behind (§MVVM autorisé)
 
 ## acceptance
-Given 0 client connecté, aucun « Ankama Launcher » et un chemin résolu When j'ouvre Comptes Then le bouton « Ouvrir une session » (fond accent, texte blanc) est affiché
-Given aucun chemin utilisable When j'ouvre Comptes Then le bouton « Ouvrir une session » est masqué
-Given un chemin configuré dans Réglages When je clique « Ouvrir une session » Then ce chemin est lancé (il prime sur l'auto-détection)
-Given un client connecté When je clique sa croix rouge Then son processus est force-killé, les autres intacts
-Given ≥1 client connecté When je clique « Terminer session » Then tous les clients sont force-killés puis l'app se ferme
-Given « Fermer minimise » activé When je clique [X] Then la fenêtre se minimise (barre d'état si l'option est active) au lieu de quitter
-Given une config v2 (sans cycle de vie) When l'app charge Then schemaVersion 3 et CloseMinimizes = true (comportement tray préservé)
+Given un perso connecté sans compte When j'ouvre Comptes Then il figure dans la liste connectés avec poignée ☰, œil et croix
+Given un perso sans compte When je le glisse Then son rang de rotation change et est persisté
+Given un perso sans compte non exclu When j'appuie suivant Then la rotation l'inclut (non-régression)
+Given un perso sans compte When je l'exclus Then la rotation le saute
+Given un perso connecté sans compte When je lui assigne un raccourci direct Then l'appui active sa fenêtre
+Given une entrée déjà assignée When je l'assigne à un perso sans compte Then refus inline, aucune persistance
+Given un perso sans compte avec DirectBinding When je le lie à un compte sans binding Then le binding est transféré au compte
+Given la ligne d'un perso sans compte When aucun compte n'est sélectionné Then le bouton « Lier » est masqué

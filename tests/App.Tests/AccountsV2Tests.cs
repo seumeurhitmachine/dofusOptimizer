@@ -130,14 +130,14 @@ public class AccountsV2Tests
         vm.Settings.CreateAccountCommand.Execute(null);
         detector.RaiseAppeared("Iop", 1);
         vm.Accounts.LinkCharacter("Iop", "Compte1");
-        Assert.Single(vm.Accounts.ConnectedAccounts);
+        Assert.Single(vm.Accounts.ConnectedRows, r => r.IsLinked);
 
         vm.Settings.GameAccounts.Single(r => r.Name == "Compte1").DeleteCommand.Execute(null);
 
         Assert.Empty(vm.Config.GameAccounts);
         Assert.DoesNotContain(vm.Config.Accounts, a => a.CharacterName == "Iop"); // cascade : config retirée
-        Assert.Empty(vm.Accounts.ConnectedAccounts);
-        Assert.Single(vm.Accounts.UnlinkedConnected); // encore connecté → réapparaît non lié (zone 2)
+        Assert.DoesNotContain(vm.Accounts.ConnectedRows, r => r.IsLinked);
+        Assert.Single(vm.Accounts.ConnectedRows, r => !r.IsLinked); // encore connecté → réapparaît non lié
     }
 
     [Fact]
@@ -157,8 +157,8 @@ public class AccountsV2Tests
         character.DeleteCommand.Execute(null);
 
         Assert.DoesNotContain(vm.Config.Accounts, a => a.CharacterName == "Iop");
-        Assert.Empty(vm.Accounts.ConnectedAccounts);
-        Assert.Single(vm.Accounts.UnlinkedConnected); // encore connecté → zone 2
+        Assert.DoesNotContain(vm.Accounts.ConnectedRows, r => r.IsLinked);
+        Assert.Single(vm.Accounts.ConnectedRows, r => !r.IsLinked); // encore connecté → non lié
         // Le compte reste, désormais sans personnage lié.
         Assert.Empty(vm.Settings.GameAccounts.Single(r => r.Name == "Compte1").LinkedCharacters);
     }
@@ -173,13 +173,13 @@ public class AccountsV2Tests
         vm.Settings.NewAccountName = "Compte1";
         vm.Settings.CreateAccountCommand.Execute(null);
         detector.RaiseAppeared("Iop", 1);
-        Assert.Single(vm.Accounts.UnlinkedConnected);
+        Assert.Single(vm.Accounts.ConnectedRows, r => !r.IsLinked);
         Assert.Contains("Compte1", vm.Accounts.AvailableAccounts);
 
         vm.Accounts.LinkCharacter("Iop", "Compte1");
 
-        Assert.Empty(vm.Accounts.UnlinkedConnected);
-        Assert.Equal("Compte1", Assert.Single(vm.Accounts.ConnectedAccounts).AccountName);
+        Assert.DoesNotContain(vm.Accounts.ConnectedRows, r => !r.IsLinked);
+        Assert.Equal("Compte1", Assert.Single(vm.Accounts.ConnectedRows, r => r.IsLinked).AccountName);
         Assert.DoesNotContain("Compte1", vm.Accounts.AvailableAccounts); // compte occupé (perso connecté)
         Assert.Equal("Compte1", vm.Config.Accounts.Single(a => a.CharacterName == "Iop").AccountName);
     }

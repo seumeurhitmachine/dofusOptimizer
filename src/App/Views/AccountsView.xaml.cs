@@ -15,10 +15,14 @@ using SystemParameters = System.Windows.SystemParameters;
 namespace DofusSwitcher.Views;
 
 /// <summary>
-/// Vue de l'onglet Comptes (v2) : 3 zones pilotées par databinding. Le seul code-behind est le
-/// glisser-déposer de réordonnancement de la <b>zone 1</b> (comptes connectés) — concern purement vue
-/// (hit-test), qui réordonne l'ordre de rotation via <see cref="AccountsViewModel.MoveItem"/> (chemin
-/// unique de mutation). La position est persistée même pour les personnages absents.
+/// Vue de l'onglet Comptes (Axe 10) : liste unifiée des connectés + comptes déconnectés, pilotées par
+/// databinding. Le seul code-behind est le glisser-déposer de réordonnancement de la <b>liste des
+/// connectés</b> (toute ligne, liée ou non) — concern purement vue (hit-test). Le glisser prévisualise
+/// en direct : la ligne glissée devient « fantôme » et se réinsère
+/// entre les autres (qui se décalent) via <see cref="AccountsViewModel.PreviewReorder"/> ; l'ordre n'est
+/// figé et persisté qu'au lâcher (<see cref="AccountsViewModel.CommitReorder"/>), un glisser annulé étant
+/// rétabli par <see cref="AccountsViewModel.CancelReorder"/>. La position est persistée même pour les
+/// personnages absents.
 /// </summary>
 public partial class AccountsView : UserControl
 {
@@ -33,7 +37,7 @@ public partial class AccountsView : UserControl
     private void Handle_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         _dragStart = e.GetPosition(null);
-        _dragged = ((sender as FrameworkElement)?.DataContext as ConnectedAccountViewModel)?.Character;
+        _dragged = ((sender as FrameworkElement)?.DataContext as ConnectedRowViewModel)?.Character;
     }
 
     private void Handle_PreviewMouseMove(object sender, MouseEventArgs e)
@@ -46,20 +50,34 @@ public partial class AccountsView : UserControl
             Math.Abs(diff.Y) < SystemParameters.MinimumVerticalDragDistance)
             return;
 
-        if (sender is FrameworkElement element)
-            DragDrop.DoDragDrop(element, _dragged, DragDropEffects.Move);
+        if (sender is not FrameworkElement element) return;
 
+        // Rendu « fantôme » de la ligne glissée pendant toute l'opération modale (DoDragDrop bloque et pompe
+        // les messages : DragOver/Drop s'exécutent dedans). Capturé en local car _dragged est mis à null au drop.
+        var dragged = _dragged;
+        dragged.IsDragging = true;
+        var effect = DragDrop.DoDragDrop(element, dragged, DragDropEffects.Move);
+        dragged.IsDragging = false;
+
+        // Glisser annulé (Échap, lâcher hors cible) : rétablir l'ordre prévisualisé.
+        if (effect != DragDropEffects.Move && DataContext is AccountsViewModel vm) vm.CancelReorder();
         _dragged = null;
+    }
+
+    private void Row_DragOver(object sender, DragEventArgs e)
+    {
+        if (_dragged is null || DataContext is not AccountsViewModel vm) return;
+        if (sender is not FrameworkElement row || row.DataContext is not ConnectedRowViewModel target) return;
+
+        e.Effects = DragDropEffects.Move;
+        e.Handled = true;
+        // Insertion avant/après selon la moitié survolée : franchir le milieu réordonne, sans osciller.
+        var insertAfter = e.GetPosition(row).Y > row.ActualHeight / 2;
+        vm.PreviewReorder(_dragged, target.Character, insertAfter);
     }
 
     private void Row_Drop(object sender, DragEventArgs e)
     {
-        if (_dragged is null || DataContext is not AccountsViewModel vm) return;
-        if ((sender as FrameworkElement)?.DataContext is not ConnectedAccountViewModel target) return;
-
-        var from = vm.Items.IndexOf(_dragged);
-        var to = vm.Items.IndexOf(target.Character);
-        if (from >= 0 && to >= 0) vm.MoveItem(from, to);
-        _dragged = null;
+        if (DataContext is AccountsViewModel vm) vm.CommitReorder();
     }
 }

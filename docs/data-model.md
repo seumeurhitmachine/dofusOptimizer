@@ -34,6 +34,9 @@ erDiagram
         int    schemaVersion
         bool   interceptionSuspended
         bool   startWithWindows
+        string launcherPath "nullable — exe Ankama Launcher"
+        bool   closeMinimizes "fermer [X] minimise l'app"
+        bool   minimizeToTray "minimiser en barre d'état"
         Binding nextBinding "nullable"
         Binding prevBinding "nullable"
         AccountConfig[] accounts "personnages, ordre = rotation"
@@ -81,6 +84,13 @@ partout où il apparaît.
   (source unique — pas de champ `order` séparé, pour éviter deux vérités).
 - `interceptionSuspended = true` ⇒ le hook transmet toujours nativement (RG-T03) ;
   état persistant.
+- `launcherPath` optionnel (Axe 9) : chemin de l'exécutable Ankama Launcher pour « Ouvrir une session ».
+  Vide/`null` ⇒ auto-détection (`%LOCALAPPDATA%\Programs\Ankama Launcher\…` + registre `App Paths`) ; s'il est
+  renseigné il **prime**. Aucun chemin utilisable ⇒ bouton d'ouverture masqué.
+- `closeMinimizes` (Axe 9, **défaut `true`**) : fermer la fenêtre [X] **minimise** l'app au lieu de quitter.
+  Absent d'une config < v3 ⇒ **forcé `true`** à la migration (préserve le comportement tray historique).
+- `minimizeToTray` (Axe 9, défaut `false`) : minimiser masque la fenêtre en **barre d'état** (zone de
+  notification) plutôt qu'en barre des tâches. Les deux actifs ⇒ [X] minimise en barre d'état.
 
 ### AccountConfig (personnage)
 
@@ -149,3 +159,4 @@ partout où il apparaît.
 | Axe 2 | 2026-09-24 | Matérialisation du schéma en code (`Binding`/`AccountConfig`/`AppConfig`, `AppJsonContext`, `JsonConfigStore`). Aucun champ modifié : schemaVersion reste 1. Invariant d'unicité globale porté par `AppConfig.HasBindingConflicts()`. |
 | Axe 5 | 2026-09-24 | Encodage `Binding.Code` pour `MouseButton` étendu à toute la souris (gauche=3, droit=4, milieu=5 ; XButton1/2=1/2 inchangés). Aucun champ ni schemaVersion modifié (valeurs de `code` élargies). Encodage/formatage centralisés dans `InputCapture`. |
 | Axe 8 | 2026-09-24 | **schemaVersion 1 → 2**. Nouvelle entité `GameAccount` (compte) dans `appConfig.gameAccounts` ; lien nullable `accountConfig.accountName` (personnage→compte). Migration montante additive (v1 sans `gameAccounts` → liste vide, personnages non liés). Terminologie clarifiée : `AccountConfig` = personnage. |
+| Axe 9 | 2026-09-25 | **schemaVersion 2 → 3**. Cycle de session/vie : `appConfig.launcherPath` (nullable, chemin Ankama Launcher), `closeMinimizes` (défaut `true`), `minimizeToTray` (défaut `false`). Migration montante : configs < v3 → `closeMinimizes` forcé `true` (préserve le comportement tray). Aucune entité modifiée. |

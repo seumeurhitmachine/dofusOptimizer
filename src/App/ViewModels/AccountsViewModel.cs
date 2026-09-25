@@ -23,25 +23,40 @@ namespace DofusSwitcher.ViewModels;
 public sealed class AccountsViewModel : ObservableObject
 {
     private readonly Dictionary<string, DetectedWindow> _detected = new(StringComparer.Ordinal);
+    private readonly ISessionProcessService? _session;
+    private readonly Action? _requestShutdown;
     private List<AccountConfig> _persisted;
     private List<GameAccount> _gameAccounts;
     private AccountItemViewModel? _selectedItem;
+    private bool _hasConnectedClients;
+    private bool _showOpenSession;
+    private string? _configuredLauncherPath;
+    private string? _launcherPath;
+    private bool _launcherResolved;
 
     /// <summary>
     /// Câble le VM sur les comptes persistés et le détecteur. L'abonnement précède <see cref="IWindowDetector.Start"/>
-    /// (composition root) pour capter l'énumération initiale.
+    /// (composition root) pour capter l'énumération initiale. Le service de session et le rappel de fermeture
+    /// (Axe 9) sont optionnels : les tests VM qui n'exercent pas le cycle de session les omettent.
     /// </summary>
     public AccountsViewModel(
         IReadOnlyList<AccountConfig> persisted,
         IWindowDetector detector,
-        IReadOnlyList<GameAccount>? gameAccounts = null)
+        IReadOnlyList<GameAccount>? gameAccounts = null,
+        ISessionProcessService? session = null,
+        Action? requestShutdown = null)
     {
         _persisted = [.. persisted];
         _gameAccounts = [.. gameAccounts ?? []];
+        _session = session;
+        _requestShutdown = requestShutdown;
         MoveUpCommand = new RelayCommand(() => MoveSelected(-1), () => CanMoveSelected(-1));
         MoveDownCommand = new RelayCommand(() => MoveSelected(+1), () => CanMoveSelected(+1));
         ToggleExcludeCommand = new RelayCommand(ToggleExcludeSelected, () => SelectedItem is not null);
         ToggleExcludeItemCommand = new RelayCommand<AccountItemViewModel>(ToggleExclude);
+        OpenSessionCommand = new RelayCommand(OpenSession, () => _session is not null && LauncherPath() is not null);
+        CloseClientCommand = new RelayCommand<AccountItemViewModel>(CloseClient);
+        EndSessionCommand = new RelayCommand(EndSession, () => HasConnectedClients);
 
         detector.AccountAppeared += OnAccountAppeared;
         detector.AccountDisappeared += OnAccountDisappeared;
@@ -85,6 +100,23 @@ public sealed class AccountsViewModel : ObservableObject
     /// <summary>Zone 3 non vide (au moins un compte déconnecté à personnages liés).</summary>
     public bool HasDisconnected => DisconnectedAccounts.Count > 0;
 
+    /// <summary>Vrai si au moins un client DOFUS est actuellement connecté (Axe 9) — pilote « Terminer session ».</summary>
+    public bool HasConnectedClients
+    {
+        get => _hasConnectedClients;
+        private set { if (SetProperty(ref _hasConnectedClients, value)) EndSessionCommand.RaiseCanExecuteChanged(); }
+    }
+
+    /// <summary>
+    /// Vrai quand aucun client n'est connecté ET aucun launcher n'est ouvert (Axe 9) : pilote la visibilité
+    /// du gros bouton « Ouvrir une session ». Sans service de session (tests VM purs), toujours faux.
+    /// </summary>
+    public bool ShowOpenSession
+    {
+        get => _showOpenSession;
+        private set => SetProperty(ref _showOpenSession, value);
+    }
+
     /// <summary>Compte sélectionné dans la liste — cible des commandes ↑/↓/exclure (lié à la ListBox).</summary>
     public AccountItemViewModel? SelectedItem
     {
@@ -106,6 +138,18 @@ public sealed class AccountsViewModel : ObservableObject
     /// l'item passé en paramètre, indépendamment de la sélection courante.
     /// </summary>
     public RelayCommand<AccountItemViewModel> ToggleExcludeItemCommand { get; }
+
+    /// <summary>
+    /// Lance l'Ankama Launcher (Axe 9, cycle de session). Désactivée sans service de session ou si le chemin
+    /// du launcher est introuvable (bouton affiché mais grisé). Ref exception C-02 [DT-027].
+    /// </summary>
+    public RelayCommand OpenSessionCommand { get; }
+
+    /// <summary>Force-kill le processus du client passé en paramètre (croix rouge par ligne connectée, Axe 9).</summary>
+    public RelayCommand<AccountItemViewModel> CloseClientCommand { get; }
+
+    /// <summary>Force-kill tous les clients connectés puis ferme réellement l'application (Axe 9).</summary>
+    public RelayCommand EndSessionCommand { get; }
 
     /// <summary>
     /// Émis après une modification utilisateur (ordre/exclusion) avec la liste ordonnée à persister.
@@ -301,7 +345,71 @@ public sealed class AccountsViewModel : ObservableObject
         OnPropertyChanged(nameof(HasConnected));
         OnPropertyChanged(nameof(HasUnlinked));
         OnPropertyChanged(nameof(HasDisconnected));
+        RefreshSessionState();
         RuntimeChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Recalcule l'état du cycle de session (Axe 9) : présence de clients connectés et visibilité du bouton
+    /// « Ouvrir une session ». [DECISION] La présence du launcher n'est sondée que lorsqu'aucun client n'est
+    /// connecté (sinon le bouton est masqué de toute façon) et jamais en polling (anti-bot) : le
+    /// rafraîchissement suit les apparitions/disparitions de fenêtres. Limitation : un launcher ouvert
+    /// hors application, sans client, n'est détecté qu'au prochain événement fenêtre → recette.
+    /// </summary>
+    private void RefreshSessionState()
+    {
+        HasConnectedClients = Items.Any(i => i.IsConnected);
+        var launcherRunning = !HasConnectedClients && _session is not null && _session.IsLauncherRunning();
+        // Masqué si aucun client, launcher déjà ouvert, OU aucun chemin de launcher utilisable (RG évolution).
+        ShowOpenSession = _session is not null && !HasConnectedClients && !launcherRunning && LauncherPath() is not null;
+    }
+
+    /// <summary>
+    /// Chemin du launcher résolu une fois puis mémoïsé : chemin configuré (Réglages) sinon auto-détection.
+    /// Réévalué par <see cref="SetLauncherPath"/> quand l'utilisateur change le chemin.
+    /// </summary>
+    private string? LauncherPath()
+    {
+        if (!_launcherResolved)
+        {
+            _launcherPath = _session?.ResolveLauncherPath(_configuredLauncherPath);
+            _launcherResolved = true;
+        }
+        return _launcherPath;
+    }
+
+    /// <summary>
+    /// Applique le chemin de launcher configuré (Réglages, Axe 9) : réévalue la résolution et le gating du
+    /// bouton. Appelé au démarrage (config initiale), sur modification dans les Réglages et à l'import.
+    /// </summary>
+    public void SetLauncherPath(string? configuredPath)
+    {
+        _configuredLauncherPath = configuredPath;
+        _launcherResolved = false;
+        RefreshSessionState();
+        OpenSessionCommand.RaiseCanExecuteChanged();
+    }
+
+    private void OpenSession()
+    {
+        var path = LauncherPath();
+        if (_session is null || path is null || !_session.LaunchLauncher(path)) return;
+        // Le launcher vient de démarrer : masquer le bouton sans attendre le prochain événement fenêtre.
+        ShowOpenSession = false;
+    }
+
+    private void CloseClient(AccountItemViewModel? item)
+    {
+        if (item is not null) _session?.KillByHandle(item.Handle);
+    }
+
+    private void EndSession()
+    {
+        if (_session is null) return;
+        // Snapshot : KillByHandle peut faire disparaître des fenêtres et muter Items pendant l'itération.
+        foreach (var item in Items.Where(i => i.IsConnected).ToList())
+            _session.KillByHandle(item.Handle);
+        _requestShutdown?.Invoke();
     }
 
     /// <summary>

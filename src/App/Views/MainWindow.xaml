@@ -11,14 +11,14 @@
         WindowStartupLocation="CenterScreen">
 
     <!-- Shell à onglets (ui-design.md §Navigation). Comptes (Axe 3) + Raccourcis (Axe 5) + Réglages (Axe 7). -->
-    <TabControl>
+    <TabControl SelectionChanged="OnTabChanged">
         <TabItem Header="Comptes">
             <views:AccountsView DataContext="{Binding Accounts}" />
         </TabItem>
         <TabItem Header="Raccourcis">
             <views:ShortcutsView DataContext="{Binding Shortcuts}" />
         </TabItem>
-        <TabItem Header="Réglages">
+        <TabItem x:Name="ReglagesTab" Header="Réglages">
             <views:ReglagesView DataContext="{Binding Settings}" />
         </TabItem>
     </TabControl>

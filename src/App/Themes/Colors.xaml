@@ -20,6 +20,8 @@
     <!-- Texte -->
     <Color x:Key="TextPrimaryColor">#E4E6EB</Color>
     <Color x:Key="TextSecondaryColor">#9AA0A6</Color>
+    <!-- Texte sur fond accent/coloré (ex. CTA « Ouvrir une session ») : blanc pur, contraste AA garanti. -->
+    <Color x:Key="TextOnAccentColor">#FFFFFF</Color>
 
     <!-- États -->
     <Color x:Key="SuccessColor">#4CAF6E</Color>
@@ -36,6 +38,7 @@
     <SolidColorBrush x:Key="SurfaceAltBrush" Color="{StaticResource SurfaceAltColor}" />
     <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}" />
     <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}" />
+    <SolidColorBrush x:Key="TextOnAccentBrush" Color="{StaticResource TextOnAccentColor}" />
     <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" />
     <SolidColorBrush x:Key="ErrorBrush" Color="{StaticResource ErrorColor}" />
     <SolidColorBrush x:Key="WarningBrush" Color="{StaticResource WarningColor}" />

@@ -12,6 +12,9 @@ public interface IFileDialogService
     /// </summary>
     string? AskSavePath(string suggestedFileName);
 
-    /// <summary>Demande un fichier à ouvrir. Retourne le chemin choisi, ou <c>null</c> si annulé.</summary>
-    string? AskOpenPath();
+    /// <summary>
+    /// Demande un fichier à ouvrir avec le <paramref name="filter"/> de types donné (ex. config JSON ou
+    /// exécutable du launcher). Retourne le chemin choisi, ou <c>null</c> si annulé.
+    /// </summary>
+    string? AskOpenPath(string filter);
 }

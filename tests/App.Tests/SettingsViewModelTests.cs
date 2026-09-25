@@ -145,4 +145,66 @@ public class SettingsViewModelTests
         Assert.Null(vm.Settings.StatusMessage);
         Assert.Empty(emitted);
     }
+
+    // --- Cycle de vie & UI Réglages (Axe 9). ---
+
+    [Fact]
+    public void AjoutCompte_MasqueParDefaut_DeplieParPlus_PuisReplie()
+    {
+        var (vm, _, _) = Build(AppConfig.Default);
+
+        Assert.False(vm.Settings.IsAddAccountVisible);
+
+        vm.Settings.ShowAddAccountCommand.Execute(null);
+        Assert.True(vm.Settings.IsAddAccountVisible);
+
+        vm.Settings.ShowAddAccountCommand.Execute(null); // rappuyer quand visible : aucun effet
+        Assert.True(vm.Settings.IsAddAccountVisible);
+
+        vm.Settings.CollapseAddAccount(); // quitter l'onglet Réglages
+        Assert.False(vm.Settings.IsAddAccountVisible);
+    }
+
+    [Fact]
+    public void BasculeFermerMinimise_Persiste()
+    {
+        var (vm, emitted, _) = Build(AppConfig.Default);
+
+        vm.Settings.CloseMinimizes = false;
+
+        Assert.False(vm.Config.CloseMinimizes);
+        Assert.Single(emitted);
+        Assert.False(emitted[0].CloseMinimizes);
+    }
+
+    [Fact]
+    public void BasculeMinimiserBarreEtat_Persiste()
+    {
+        var (vm, emitted, _) = Build(AppConfig.Default);
+
+        vm.Settings.MinimizeToTray = true;
+
+        Assert.True(vm.Config.MinimizeToTray);
+        Assert.Single(emitted);
+        Assert.True(emitted[0].MinimizeToTray);
+    }
+
+    [Fact]
+    public void FermerLApplication_InvoqueLArret()
+    {
+        var quitCount = 0;
+        var vm = new MainViewModel(AppConfig.Default, new FakeWindowDetector(), new FakeInputCaptureService(null),
+            new FakeStartupRegistryService(), new FakeFileDialogService(), session: null, requestShutdown: () => quitCount++);
+
+        vm.Settings.QuitApplicationCommand.Execute(null);
+
+        Assert.Equal(1, quitCount);
+    }
+
+    [Fact]
+    public void ConfigParDefaut_FermerMinimiseActif_BarreEtatInactif()
+    {
+        Assert.True(AppConfig.Default.CloseMinimizes);
+        Assert.False(AppConfig.Default.MinimizeToTray);
+    }
 }

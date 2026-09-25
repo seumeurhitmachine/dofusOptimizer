@@ -9,9 +9,13 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <ApplicationIcon>Resources/app.ico</ApplicationIcon>
-    <!-- [DECISION] Namespace racine DofusSwitcher (l'assembly/exe reste App.exe via le nom de projet).
-         Évite le conflit namespace==classe App qui casse le point d'entrée WPF généré. -->
+    <!-- [DECISION] Namespace racine DofusSwitcher : évite le conflit namespace==classe App qui casse le
+         point d'entrée WPF généré. L'AssemblyName (nom de l'exe) est indépendant du RootNamespace :
+         l'exécutable publié est DofusOptimizer.exe (Axe 9), sans réintroduire ce conflit. -->
     <RootNamespace>DofusSwitcher</RootNamespace>
+    <AssemblyName>DofusOptimizer</AssemblyName>
+    <!-- Version applicative (affichée dans l'à-propos via Assembly.GetName().Version). -->
+    <Version>1.1.0</Version>
     <!-- [DECISION] Axe 3 : requis pour les pointeurs de fonction (delegate* unmanaged) et les
          callbacks [UnmanagedCallersOnly] de la détection. [LibraryImport] ne marshale pas les
          délégués (SYSLIB1051) ; les pointeurs de fonction sont la voie compatible source-gen.

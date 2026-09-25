@@ -68,15 +68,18 @@ public sealed class JsonConfigStore : IConfigStore
     /// <summary>
     /// Migration montante idempotente, partagée avec l'import (<see cref="ConfigImport"/>).
     /// v1→v2 : ajout des comptes (<see cref="AppConfig.GameAccounts"/>) et du lien
-    /// <see cref="AccountConfig.AccountName"/>. Une config v1 n'a pas le champ <c>gameAccounts</c>
-    /// (désérialisé <c>null</c>) → normalisé en liste vide ; les personnages restent non liés
-    /// (<c>accountName = null</c>). Les évolutions futures ajouteront ici leurs transformations.
+    /// <see cref="AccountConfig.AccountName"/> — une config v1 n'a pas <c>gameAccounts</c> (désérialisé
+    /// <c>null</c>) → liste vide ; personnages non liés.
+    /// v→v3 : cycle de vie fenêtre (Axe 9). Les configs antérieures n'ont pas <c>closeMinimizes</c>
+    /// (source-gen → <c>false</c>) : on force <c>true</c> pour préserver le comportement tray historique
+    /// (fermer masquait la fenêtre). <c>minimizeToTray</c> reste au défaut <c>false</c>.
     /// </summary>
     internal static AppConfig Migrate(AppConfig config) =>
         config with
         {
-            SchemaVersion = AppConfig.CurrentSchemaVersion,
             GameAccounts = config.GameAccounts ?? [],
+            CloseMinimizes = config.SchemaVersion < 3 || config.CloseMinimizes,
+            SchemaVersion = AppConfig.CurrentSchemaVersion,
         };
 
     /// <summary>

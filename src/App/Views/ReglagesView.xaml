@@ -180,35 +180,114 @@
                           AutomationProperties.Name="Démarrer avec Windows" />
             </Grid>
 
-            <Border Margin="0,4,0,12" BorderBrush="{StaticResource SurfaceAltBrush}" BorderThickness="0,1,0,0" />
-
-            <!-- Gestion des comptes (Axe 8, US-C01/C02/C03). -->
-            <TextBlock Text="Comptes"
-                       FontSize="13" FontWeight="SemiBold"
-                       Margin="0,0,0,8"
-                       Foreground="{StaticResource TextPrimaryBrush}" />
-
-            <!-- Création d'un compte. -->
-            <Grid Margin="0,0,0,4">
+            <!-- Fermer [X] minimise l'application (Axe 9). Si off, [X] quitte réellement le processus. -->
+            <Grid Style="{StaticResource OptionRowStyle}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <TextBox Grid.Column="0"
-                         Style="{StaticResource DarkTextBoxStyle}"
-                         MaxLength="40"
-                         Text="{Binding NewAccountName, UpdateSourceTrigger=PropertyChanged}"
-                         AutomationProperties.Name="Nom du nouveau compte" />
-                <Button Grid.Column="1"
-                        Style="{StaticResource ActionButtonStyle}"
-                        Margin="6,0,0,0"
-                        Content="Créer"
-                        Command="{Binding CreateAccountCommand}" />
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="Fermer [X] l'application la minimise" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" />
+                    <TextBlock Text="Sinon, fermer termine le processus"
+                               FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                </StackPanel>
+                <CheckBox Grid.Column="1"
+                          Style="{StaticResource ToggleSwitchStyle}"
+                          IsChecked="{Binding CloseMinimizes}"
+                          AutomationProperties.Name="Fermer minimise l'application" />
             </Grid>
-            <TextBlock Text="{Binding AccountError}"
-                       FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8"
-                       Foreground="{StaticResource ErrorBrush}"
-                       Visibility="{Binding HasAccountError, Converter={StaticResource BoolToVisibility}}" />
+
+            <!-- Minimiser dans la barre d'état (Axe 9). Complémentaire : les deux activés → [X] minimise en barre d'état. -->
+            <Grid Style="{StaticResource OptionRowStyle}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="Minimiser dans la barre d'état" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" />
+                    <TextBlock Text="Réduit dans la zone de notification plutôt que la barre des tâches"
+                               FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                </StackPanel>
+                <CheckBox Grid.Column="1"
+                          Style="{StaticResource ToggleSwitchStyle}"
+                          IsChecked="{Binding MinimizeToTray}"
+                          AutomationProperties.Name="Minimiser dans la barre d'état" />
+            </Grid>
+
+            <!-- Bouton « Fermer l'application » : utile seulement quand [X] minimise (sinon [X] quitte déjà). -->
+            <Button Style="{StaticResource ActionButtonStyle}" HorizontalAlignment="Left" Margin="0,0,0,12"
+                    Content="Fermer l'application" Command="{Binding QuitApplicationCommand}"
+                    Visibility="{Binding CloseMinimizes, Converter={StaticResource BoolToVisibility}}" />
+
+            <Border Margin="0,0,0,12" BorderBrush="{StaticResource SurfaceAltBrush}" BorderThickness="0,1,0,0" />
+
+            <!-- Chemin de l'Ankama Launcher (Axe 9). Vide = auto-détection ; si aucun chemin utilisable, le
+                 bouton « Ouvrir une session » de l'onglet Comptes est masqué. -->
+            <StackPanel Margin="0,0,0,12">
+                <TextBlock Text="Ankama Launcher" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" />
+                <TextBlock Text="Chemin de l'exécutable"
+                           FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap"
+                           Margin="0,0,0,4" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0"
+                             Style="{StaticResource DarkTextBoxStyle}"
+                             Text="{Binding LauncherPath, UpdateSourceTrigger=LostFocus}"
+                             AutomationProperties.Name="Chemin de l'Ankama Launcher" />
+                    <Button Grid.Column="1"
+                            Style="{StaticResource ActionButtonStyle}"
+                            Margin="6,0,0,0"
+                            Content="Parcourir…"
+                            Command="{Binding BrowseLauncherCommand}" />
+                </Grid>
+            </StackPanel>
+
+            <Border Margin="0,4,0,12" BorderBrush="{StaticResource SurfaceAltBrush}" BorderThickness="0,1,0,0" />
+
+            <!-- Gestion des comptes (Axe 8, US-C01/C02/C03). En-tête + bouton « + » qui déplie la création. -->
+            <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Comptes"
+                           FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                           Foreground="{StaticResource TextPrimaryBrush}" />
+                <Button Grid.Column="1"
+                        Style="{StaticResource IconButtonStyle}"
+                        ToolTip="Ajouter un compte"
+                        Command="{Binding ShowAddAccountCommand}">
+                    <TextBlock Text="&#43;" FontSize="18" Foreground="{StaticResource TextPrimaryBrush}"
+                               VerticalAlignment="Center" />
+                </Button>
+            </Grid>
+
+            <!-- Création d'un compte : dépliée par « + », repliée en quittant l'onglet Réglages. -->
+            <StackPanel Visibility="{Binding IsAddAccountVisible, Converter={StaticResource BoolToVisibility}}">
+                <Grid Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0"
+                             Style="{StaticResource DarkTextBoxStyle}"
+                             MaxLength="40"
+                             Text="{Binding NewAccountName, UpdateSourceTrigger=PropertyChanged}"
+                             AutomationProperties.Name="Nom du nouveau compte" />
+                    <Button Grid.Column="1"
+                            Style="{StaticResource ActionButtonStyle}"
+                            Margin="6,0,0,0"
+                            Content="Créer"
+                            Command="{Binding CreateAccountCommand}" />
+                </Grid>
+                <TextBlock Text="{Binding AccountError}"
+                           FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8"
+                           Foreground="{StaticResource ErrorBrush}"
+                           Visibility="{Binding HasAccountError, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
 
             <!-- Liste des comptes : nom (non modifiable) + suppression, et personnages liés dépliables. -->
             <ItemsControl ItemsSource="{Binding GameAccounts}">

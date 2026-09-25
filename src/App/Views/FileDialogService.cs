@@ -28,11 +28,11 @@ public sealed class FileDialogService : IFileDialogService
     }
 
     /// <inheritdoc/>
-    public string? AskOpenPath()
+    public string? AskOpenPath(string filter)
     {
         var dialog = new OpenFileDialog
         {
-            Filter = AppConstants.ConfigFileDialogFilter,
+            Filter = filter,
             CheckFileExists = true,
         };
         return dialog.ShowDialog() == true ? dialog.FileName : null;

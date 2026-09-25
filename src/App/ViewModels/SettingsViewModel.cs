@@ -21,19 +21,27 @@ public sealed class SettingsViewModel : ObservableObject
     private readonly IFileDialogService _fileDialog;
     private readonly Action<bool> _applySuspended;
     private readonly Action<bool> _applyStartWithWindows;
+    private readonly Action<string?> _applyLauncherPath;
+    private readonly Action<bool> _applyCloseMinimizes;
+    private readonly Action<bool> _applyMinimizeToTray;
     private readonly Action<AppConfig> _applyImported;
     private readonly Func<string, string?> _addAccount;
     private readonly Action<string> _deleteAccount;
     private readonly Action<string> _deleteCharacter;
+    private readonly Action? _requestShutdown;
     private System.Windows.Threading.DispatcherTimer? _accountErrorTimer;
 
     private AppConfig _config;
     private bool _isInterceptionSuspended;
     private bool _startWithWindows;
+    private bool _closeMinimizes;
+    private bool _minimizeToTray;
     private string? _statusMessage;
     private bool _isStatusError;
     private string _newAccountName = string.Empty;
     private string? _accountError;
+    private string _launcherPath = string.Empty;
+    private bool _isAddAccountVisible;
 
     /// <summary>Câble le VM sur la config, les services système et les chemins d'application (MainViewModel).</summary>
     public SettingsViewModel(
@@ -42,29 +50,43 @@ public sealed class SettingsViewModel : ObservableObject
         IFileDialogService fileDialog,
         Action<bool> applySuspended,
         Action<bool> applyStartWithWindows,
+        Action<string?> applyLauncherPath,
+        Action<bool> applyCloseMinimizes,
+        Action<bool> applyMinimizeToTray,
         Action<AppConfig> applyImported,
         Func<string, string?> addAccount,
         Action<string> deleteAccount,
-        Action<string> deleteCharacter)
+        Action<string> deleteCharacter,
+        Action? requestShutdown = null)
     {
         _config = config;
         _startup = startup;
         _fileDialog = fileDialog;
         _applySuspended = applySuspended;
         _applyStartWithWindows = applyStartWithWindows;
+        _applyLauncherPath = applyLauncherPath;
+        _applyCloseMinimizes = applyCloseMinimizes;
+        _applyMinimizeToTray = applyMinimizeToTray;
         _applyImported = applyImported;
         _addAccount = addAccount;
         _deleteAccount = deleteAccount;
         _deleteCharacter = deleteCharacter;
+        _requestShutdown = requestShutdown;
 
         // [DECISION] État initial lu depuis la config (intention persistée). La réconciliation du registre
         // au chemin de l'exe courant est faite une fois par la composition root au démarrage.
         _isInterceptionSuspended = config.InterceptionSuspended;
         _startWithWindows = config.StartWithWindows;
+        _launcherPath = config.LauncherPath ?? string.Empty;
+        _closeMinimizes = config.CloseMinimizes;
+        _minimizeToTray = config.MinimizeToTray;
 
         ExportCommand = new RelayCommand(Export);
         ImportCommand = new RelayCommand(Import);
+        BrowseLauncherCommand = new RelayCommand(BrowseLauncher);
         CreateAccountCommand = new RelayCommand(CreateAccount);
+        ShowAddAccountCommand = new RelayCommand(() => IsAddAccountVisible = true);
+        QuitApplicationCommand = new RelayCommand(() => _requestShutdown?.Invoke());
         RebuildAccountRows();
     }
 
@@ -88,6 +110,58 @@ public sealed class SettingsViewModel : ObservableObject
             _startup.SetEnabled(value);       // HKCU\...\Run (sans élévation)
             _applyStartWithWindows(value);    // intention persistée dans la config
         }
+    }
+
+    /// <summary>
+    /// Cycle de vie : fermer la fenêtre [X] minimise l'application (vrai) ou la quitte (faux). Persisté via
+    /// le <see cref="MainViewModel"/> ; lu par <c>MainWindow.OnClosing</c>.
+    /// </summary>
+    public bool CloseMinimizes
+    {
+        get => _closeMinimizes;
+        set { if (SetProperty(ref _closeMinimizes, value)) _applyCloseMinimizes(value); }
+    }
+
+    /// <summary>Cycle de vie : minimiser masque la fenêtre dans la barre d'état plutôt que la barre des tâches.</summary>
+    public bool MinimizeToTray
+    {
+        get => _minimizeToTray;
+        set { if (SetProperty(ref _minimizeToTray, value)) _applyMinimizeToTray(value); }
+    }
+
+    /// <summary>Visibilité de la ligne de création de compte (dépliée par le bouton « + », repliée en quittant l'onglet).</summary>
+    public bool IsAddAccountVisible
+    {
+        get => _isAddAccountVisible;
+        private set => SetProperty(ref _isAddAccountVisible, value);
+    }
+
+    /// <summary>Déplie la ligne d'ajout de compte (idempotent : rappuyer quand elle est visible n'a aucun effet).</summary>
+    public RelayCommand ShowAddAccountCommand { get; }
+
+    /// <summary>Ferme réellement l'application (bouton Réglages, utile quand [X] minimise au lieu de quitter).</summary>
+    public RelayCommand QuitApplicationCommand { get; }
+
+    /// <summary>Replie la ligne d'ajout de compte — appelé quand on quitte l'onglet Réglages (MainWindow).</summary>
+    public void CollapseAddAccount() => IsAddAccountVisible = false;
+
+    /// <summary>
+    /// Chemin de l'exécutable de l'Ankama Launcher (Axe 9). Vide = auto-détection ; si aucun chemin utilisable,
+    /// le bouton « Ouvrir une session » de l'onglet Comptes est masqué. Persisté via le <see cref="MainViewModel"/>.
+    /// </summary>
+    public string LauncherPath
+    {
+        get => _launcherPath;
+        set { if (SetProperty(ref _launcherPath, value)) _applyLauncherPath(value); }
+    }
+
+    /// <summary>Ouvre un sélecteur de fichier pour choisir l'exécutable du launcher.</summary>
+    public RelayCommand BrowseLauncherCommand { get; }
+
+    private void BrowseLauncher()
+    {
+        var path = _fileDialog.AskOpenPath(AppConstants.LauncherFileDialogFilter);
+        if (path is not null) LauncherPath = path; // le setter persiste et réévalue le gating
     }
 
     /// <summary>Texte à-propos : nom de l'application et version.</summary>
@@ -193,6 +267,9 @@ public sealed class SettingsViewModel : ObservableObject
         SetProperty(ref _isInterceptionSuspended, config.InterceptionSuspended, nameof(IsInterceptionSuspended));
         if (SetProperty(ref _startWithWindows, config.StartWithWindows, nameof(StartWithWindows)))
             _startup.SetEnabled(config.StartWithWindows);
+        SetProperty(ref _launcherPath, config.LauncherPath ?? string.Empty, nameof(LauncherPath));
+        SetProperty(ref _closeMinimizes, config.CloseMinimizes, nameof(CloseMinimizes));
+        SetProperty(ref _minimizeToTray, config.MinimizeToTray, nameof(MinimizeToTray));
         RebuildAccountRows();
     }
 
@@ -215,7 +292,7 @@ public sealed class SettingsViewModel : ObservableObject
 
     private void Import()
     {
-        var path = _fileDialog.AskOpenPath();
+        var path = _fileDialog.AskOpenPath(AppConstants.ConfigFileDialogFilter);
         if (path is null) return; // annulé
 
         string json;

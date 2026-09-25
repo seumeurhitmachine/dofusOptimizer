@@ -16,16 +16,23 @@ namespace DofusSwitcher.ViewModels;
 /// </summary>
 public sealed class MainViewModel : ObservableObject
 {
-    /// <summary>Crée le ViewModel racine à partir de la config, du détecteur et des services (capture, registre, dialogues).</summary>
+    /// <summary>
+    /// Crée le ViewModel racine à partir de la config, du détecteur et des services (capture, registre,
+    /// dialogues). Le service de cycle de session et le rappel d'arrêt (Axe 9) sont optionnels : les tests
+    /// qui n'exercent pas la session les omettent (l'onglet Comptes désactive alors ses actions process).
+    /// </summary>
     public MainViewModel(
         AppConfig config,
         IWindowDetector detector,
         IInputCaptureService capture,
         IStartupRegistryService startup,
-        IFileDialogService fileDialog)
+        IFileDialogService fileDialog,
+        ISessionProcessService? session = null,
+        Action? requestShutdown = null)
     {
         Config = config;
-        Accounts = new AccountsViewModel(config.Accounts, detector, config.GameAccounts);
+        Accounts = new AccountsViewModel(config.Accounts, detector, config.GameAccounts, session, requestShutdown);
+        Accounts.SetLauncherPath(config.LauncherPath); // chemin de launcher persisté (Axe 9)
         // Réordonnancement/exclusion/liaison (Axe 4/8) → maj de la config → autosave débouncé (ref [DT-006]).
         Accounts.AccountsChanged += OnAccountsChanged;
         // Raccourcis (Axe 5/8) : suivant/précédent top-level ici, activation directe liée au COMPTE
@@ -35,7 +42,8 @@ public sealed class MainViewModel : ObservableObject
         Accounts.RuntimeChanged += Shortcuts.OnRuntimeChanged; // connexion/déconnexion → libellés directs à jour
         // Réglages (Axe 7/8) : suspension + démarrage Windows + export/import + CRUD comptes, remontés ici (seul writer).
         Settings = new SettingsViewModel(config, startup, fileDialog, SetInterceptionSuspended, SetStartWithWindows,
-            ApplyImportedConfig, AddAccount, DeleteAccount, DeleteCharacter);
+            SetLauncherPath, SetCloseMinimizes, SetMinimizeToTray, ApplyImportedConfig, AddAccount, DeleteAccount,
+            DeleteCharacter, requestShutdown);
     }
 
     /// <summary>Titre affiché dans la barre de la fenêtre.</summary>
@@ -139,6 +147,32 @@ public sealed class MainViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Persiste le chemin de l'Ankama Launcher (Axe 9) et le pousse au VM Comptes (réévalue la résolution et
+    /// le gating du bouton « Ouvrir une session »). Chaîne vide → <c>null</c> (efface le chemin configuré).
+    /// </summary>
+    private void SetLauncherPath(string? path)
+    {
+        var normalized = string.IsNullOrWhiteSpace(path) ? null : path.Trim();
+        Config = Config with { LauncherPath = normalized };
+        Accounts.SetLauncherPath(normalized);
+        RaiseConfigChanged();
+    }
+
+    /// <summary>Persiste le comportement « fermer [X] minimise l'application » (Axe 9). Lu par MainWindow.</summary>
+    private void SetCloseMinimizes(bool enabled)
+    {
+        Config = Config with { CloseMinimizes = enabled };
+        RaiseConfigChanged();
+    }
+
+    /// <summary>Persiste le comportement « minimiser dans la barre d'état » (Axe 9). Lu par MainWindow.</summary>
+    private void SetMinimizeToTray(bool enabled)
+    {
+        Config = Config with { MinimizeToTray = enabled };
+        RaiseConfigChanged();
+    }
+
+    /// <summary>
     /// Applique une configuration importée (US-P04), déjà validée par <see cref="Persistence.ConfigImport"/>.
     /// Remplace la config, recharge les comptes persistés puis rafraîchit tous les onglets et persiste (autosave).
     /// </summary>
@@ -147,6 +181,7 @@ public sealed class MainViewModel : ObservableObject
         Config = imported;
         Accounts.LoadPersisted(imported.Accounts);
         Accounts.LoadGameAccounts(imported.GameAccounts);
+        Accounts.SetLauncherPath(imported.LauncherPath);
         RaiseConfigChanged();
     }
 

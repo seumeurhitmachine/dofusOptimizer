@@ -215,6 +215,23 @@ internal static unsafe partial class NativeMethods
     [LibraryImport("user32.dll", SetLastError = true)]
     internal static partial uint GetWindowThreadProcessId(nint hWnd, nint lpdwProcessId);
 
+    /// <summary>
+    /// Surcharge renvoyant l'<b>identifiant de processus</b> propriétaire de la fenêtre (Axe 9).
+    /// [ARCH] Exception C-02 assumée (ref [DT-027]) : le PID sert au <b>cycle de session</b>
+    /// (fermeture d'un client via <c>SessionProcessService.KillByHandle</c>), jamais à inspecter la
+    /// mémoire/le titre du jeu. On lit le PID depuis la fenêtre — <b>aucun</b> <c>OpenProcess</c> ici ;
+    /// l'ouverture d'un handle process a lieu, côté service, uniquement pour le kill (System.Diagnostics).
+    /// </summary>
+    [LibraryImport("user32.dll", SetLastError = true)]
+    internal static partial uint GetWindowThreadProcessId(nint hWnd, out uint lpdwProcessId);
+
+    /// <summary>PID du processus propriétaire de <paramref name="hWnd"/> (0 si la fenêtre est invalide).</summary>
+    internal static uint GetProcessIdFromWindow(nint hWnd)
+    {
+        _ = GetWindowThreadProcessId(hWnd, out uint pid);
+        return pid;
+    }
+
     /// <summary>Identifiant du thread courant (pour l'attache de file d'entrée).</summary>
     [LibraryImport("kernel32.dll")]
     internal static partial uint GetCurrentThreadId();

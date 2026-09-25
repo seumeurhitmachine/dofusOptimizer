@@ -67,6 +67,57 @@ public sealed class ConfigStoreTests : IDisposable
     }
 
     [Fact]
+    public void SaveReload_PreserveLauncherPath()
+    {
+        // LauncherPath est une propriété init hors constructeur positionnel (Axe 9) : vérifier que le
+        // source-gen la sérialise et la relit bien (round-trip), et qu'une config sans le champ vaut null.
+        var store = new JsonConfigStore(_path);
+        var original = AppConfig.Default with { LauncherPath = @"C:\Games\Ankama Launcher\Ankama Launcher.exe" };
+
+        store.Save(original);
+        var json = File.ReadAllText(_path);
+        var reloaded = new JsonConfigStore(_path).Load();
+
+        Assert.Contains("\"launcherPath\"", json);
+        Assert.Equal(original.LauncherPath, reloaded.LauncherPath);
+    }
+
+    [Fact]
+    public void Load_ConfigSansLauncherPath_RetourneNull()
+    {
+        new JsonConfigStore(_path).Save(AppConfig.Default); // Default.LauncherPath == null → champ absent/nul
+        var reloaded = new JsonConfigStore(_path).Load();
+
+        Assert.Null(reloaded.LauncherPath);
+    }
+
+    [Fact]
+    public void SaveReload_PreserveCloseMinimizeEtBarreEtat()
+    {
+        var store = new JsonConfigStore(_path);
+        var original = AppConfig.Default with { CloseMinimizes = false, MinimizeToTray = true };
+
+        store.Save(original);
+        var reloaded = new JsonConfigStore(_path).Load();
+
+        Assert.False(reloaded.CloseMinimizes);
+        Assert.True(reloaded.MinimizeToTray);
+    }
+
+    [Fact]
+    public void Load_ConfigSansCloseMinimizes_RetourneVraiParDefaut()
+    {
+        // Config valide sans les champs de cycle de vie (Axe 9) : l'initialiseur de propriété doit préserver
+        // le défaut (CloseMinimizes = true), sans bump de schéma ni migration.
+        File.WriteAllText(_path, "{ \"schemaVersion\": 2, \"accounts\": [], \"gameAccounts\": [] }");
+
+        var config = new JsonConfigStore(_path).Load();
+
+        Assert.True(config.CloseMinimizes);
+        Assert.False(config.MinimizeToTray);
+    }
+
+    [Fact]
     public void Save_EcritDuJsonLisibleCamelCaseAvecEnumsEnChaines()
     {
         var store = new JsonConfigStore(_path);

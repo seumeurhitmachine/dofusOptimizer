@@ -4,9 +4,10 @@
 
 > Mettre à jour à chaque /finalise. Max 30 lignes.
 
-**Dernier Axe complété :** Axe 8 — Comptes ↔ Personnages — 2026-09-24
+**Dernier Axe complété :** Axe 9 — Cycle de session & de vie — 2026-09-25
 **Phase :** **Phase 6 — Évolution**. v1.0.0 **livrée** (tag `1.0.0`, `CHANGELOG.md`, `README.md`).
-Axe 8 livré (spec `docs/specs/comptes-v2.md`). Pas d'Axe planifié au-delà (plan-axes = Axes 1→7).
+Axe 9 livré (évolution sans spec, ref [DT-027]). **v1.1.0 prête** (à livrer via `/livraison 1.1.0`).
+Pas d'Axe planifié au-delà (plan-axes = Axes 1→7).
 **Post-v1.0.0 (hors Axe, mergé sur `main`) :** application renommée **« Dofus Optimizer »** ;
 polish UI onglet Comptes, onglets pleine largeur, icône poubelle Raccourcis.
 ⚠️ Terminologie : `AccountConfig` (code) = **personnage** (clé = nom de fenêtre) ; l'entité **compte**
@@ -62,9 +63,26 @@ est `GameAccount` (nom historique conservé pour la compat JSON `accounts`, ref 
   (`GameAccount.DirectBinding`), libellée par le personnage connecté (résolu runtime, `BuildRotationSnapshot`).
   Barre de défilement sombre globale (`Themes/Controls.xaml`).
 
+- **Cycle de session & de vie (Axe 9, v1.1.0)** : service `ISessionProcessService` (fakable) — **seul** point
+  ouvrant un handle de processus (exception C-02 assumée, [DT-027]) : `Process.Start` du launcher +
+  `Process.Kill` des clients (PID via `GetWindowThreadProcessId`, sans `OpenProcess`). Onglet Comptes : gros CTA
+  « Ouvrir une session » (visible ssi 0 client connecté + launcher absent + chemin résolu), croix rouge par
+  client connecté (zones 1&2), « Terminer session » (kill-all + shutdown). Chemin du launcher **configurable**
+  (`AppConfig.LauncherPath`, prime sur l'auto-détection `%LOCALAPPDATA%\Programs\Ankama Launcher\…` + registre
+  `App Paths`) via Réglages (champ + Parcourir) ; bouton masqué si aucun chemin. **Cycle de vie fenêtre** :
+  `CloseMinimizes` (défaut true — fermer [X] minimise, sinon quitte) + `MinimizeToTray` (minimiser en barre
+  d'état) — switches Réglages, appliqués par `MainWindow.OnClosing`/`OnStateChanged` ; bouton « Fermer
+  l'application » (visible si CloseMinimizes) ; sortie réelle pose `ForceClose` avant `Shutdown`. Ligne d'ajout
+  de compte **dépliable** (bouton +, repliée au changement d'onglet). Tray « Ouvrir la configuration » → « Ouvrir ».
+  Exe renommé **`DofusOptimizer.exe`** (`AssemblyName`). Version **1.1.0**. `schemaVersion 2→3` (migration force
+  `CloseMinimizes=true` pour préserver le comportement tray). Nouveau brush `TextOnAccentBrush`.
+
 **Contraintes techniques actives :**
 - .NET 10 + WPF, MVVM manuel, **zéro NuGet** dans l'app, publish single-file self-contained.
-- C-02 : aucune interaction avec le processus DOFUS (API fenêtres `user32` seules).
+- C-02 : aucune interaction avec le processus DOFUS pour la **reconnaissance/le jeu** (API fenêtres `user32`
+  seules). **Exception assumée [DT-027]** (Axe 9) : le *cycle de session* peut lancer le launcher et force-kill
+  les clients (`System.Diagnostics.Process`), isolé dans `SessionProcessService`. Toujours aucune injection,
+  lecture mémoire, ni inspection du jeu.
 - C-03 : aucune entrée synthétique.
 - Threading : callbacks natifs → `Dispatcher` avant toute mutation UI ; I/O disque débouncée.
 - Reconnaissance des clients DOFUS via titre/classe de fenêtre (pas de processus).
@@ -144,6 +162,17 @@ est `GameAccount` (nom historique conservé pour la compat JSON `accounts`, ref 
 - [DT-026] (Axe 8) Onglet Comptes v2 organisé par compte (3 zones) : le glisser-déposer de réordonnancement est **limité à la
   zone 1** (comptes connectés), réordonnant l'ordre de rotation persisté (`AccountsViewModel.MoveItem`). Régression assumée :
   plus de réordonnancement des personnages non connectés via l'UI (la rotation les ignore de toute façon).
+- [DT-027] (Axe 9) **Exception bornée à C-02** : le *cycle de session* ouvre des handles de processus DOFUS —
+  `Process.Start` (Ankama Launcher) et `Process.Kill` (clients) — isolés dans `SessionProcessService` (fakable).
+  Le PID vient de `GetWindowThreadProcessId(out)` (fenêtre→PID, **aucun** `OpenProcess` d'inspection). Distinct de
+  la *reconnaissance* (toujours titre/classe `user32`, PO-001) : pas d'injection, mémoire, entrée synthétique ni
+  lecture du jeu → non assimilable à du botting. `NativeMethods` étendu dans ce cadre (fichier sensible).
+- [DT-028] (Axe 9) **Cycle de vie fenêtre piloté par config** : `CloseMinimizes` (défaut true) + `MinimizeToTray`,
+  appliqués par `MainWindow` (code-behind, autorisé §MVVM). Toute sortie réelle (tray « Quitter », bouton « Fermer
+  l'application », « Terminer session ») pose `ForceClose` **avant** `Shutdown()` sinon `OnClosing` l'annule quand
+  « fermer minimise » est actif. `schemaVersion 2→3` : l'initialiseur `init` ne survit pas à la désérialisation
+  source-gen (champ absent → `false`), donc le défaut `true` est porté par la **migration** (configs < v3), pas par
+  le seul initialiseur. Le chemin du launcher configuré prime sur l'auto-détection (`AccountsViewModel.SetLauncherPath`).
 
 **Fichiers critiques — ne pas modifier sans discussion :**
 - `src/App/Interop/NativeMethods.cs` (contraintes C-02/C-03).
@@ -155,6 +184,34 @@ est `GameAccount` (nom historique conservé pour la compat JSON `accounts`, ref 
 ## Historique des Axes
 
 <!-- Une entrée par Axe complété. Ajoutée par /finalise. -->
+
+### Axe 9 — Cycle de session & de vie (évolution, 2026-09-25)
+
+**Périmètre livré :** ouverture/fermeture des **processus** DOFUS depuis l'app (sans interagir avec le jeu). Service
+`ISessionProcessService` (fakable) : lancer l'Ankama Launcher (chemin **configurable** primant sur auto-détection
+`%LOCALAPPDATA%\Programs\Ankama Launcher\…` + registre), `IsLauncherRunning`, force-kill par HWND (PID sans
+`OpenProcess`). Onglet Comptes : CTA « Ouvrir une session » (gaté), croix rouge par client, « Terminer session »
+(kill-all + shutdown). Réglages : champ launcher + Parcourir, switches **« Fermer [X] minimise »** (défaut) &
+**« Minimiser dans la barre d'état »**, bouton « Fermer l'application », ligne d'ajout de compte **dépliable** (+).
+Tray « Ouvrir ». Exe **`DofusOptimizer.exe`**. Version **1.1.0**.
+
+**Changements structurants :** nouveau champ `AppConfig.LauncherPath` + `CloseMinimizes` + `MinimizeToTray` ;
+`schemaVersion 2→3` (migration force `CloseMinimizes=true`). `NativeMethods` : surcharge `GetWindowThreadProcessId(out)`
++ `GetProcessIdFromWindow` (exception C-02). `MainViewModel` gagne `SetLauncherPath`/`SetCloseMinimizes`/
+`SetMinimizeToTray` + reçoit `ISessionProcessService` + `Action` shutdown (transmis à `AccountsViewModel`/`SettingsViewModel`).
+`MainWindow` porte le cycle de vie (`OnClosing`/`OnStateChanged`/`OnTabChanged`, `ForceClose` avant `Shutdown`).
+`IFileDialogService.AskOpenPath(filter)`. Brush `TextOnAccentBrush`.
+
+**Décisions :** [DT-027] exception bornée à C-02 (Process.Start/Kill isolés, PID sans OpenProcess) ; [DT-028]
+cycle de vie piloté par config + défaut `CloseMinimizes` porté par la migration (init non préservé au source-gen).
+
+**Vérifications :** `dotnet build` Debug + Release 0/0 ; `dotnet test` 142/142 (service : résolution/gating/kill/
+end-session, chemin configuré prioritaire ; migration v3 + round-trip ; add-account dépliable ; switches persistés ;
+quit). `dotnet publish -r win-x64` → `DofusOptimizer.exe` single-file. `docs/data-model.md` mis à jour (schemaVersion 3).
+
+**Dette technique assumée :** comportements fenêtre/tray réels (fermer=minimise, minimiser=barre d'état, restauration,
+kill/launch réels) non testables unitairement → recette. Détection du launcher ouvert **hors app** sans client :
+réévaluée seulement au prochain événement fenêtre (pas de polling, anti-bot) → le CTA peut rester visible entre-temps.
 
 ### Axe 8 — Comptes ↔ Personnages (évolution, 2026-09-24)
 

@@ -4,10 +4,10 @@
 
 > Mettre à jour à chaque /finalise. Max 30 lignes.
 
-**Dernier Axe complété :** Axe 9 — Cycle de session & de vie — 2026-09-25
-**Phase :** **Phase 6 — Évolution**. v1.0.0 **livrée** (tag `1.0.0`, `CHANGELOG.md`, `README.md`).
-Axe 9 livré (évolution sans spec, ref [DT-027]). **v1.1.0 prête** (à livrer via `/livraison 1.1.0`).
-Pas d'Axe planifié au-delà (plan-axes = Axes 1→7).
+**Dernier Axe complété :** Axe 10 — Personnages sans compte de plein droit dans la rotation — 2026-09-26
+**Phase :** **Phase 6 — Évolution**. v1.0.0 & v1.1.0 **livrées**. Axe 9 & Axe 10 livrés (évolution sans spec).
+**v1.2.0 prête** (à livrer via `/livraison 1.2.0`) — version applicative portée à `1.2.0` (`App.csproj`).
+Pas d'Axe planifié au-delà (plan-axes = Axes 1→7 ; Axes 8-10 = évolutions cadrées hors plan).
 **Post-v1.0.0 (hors Axe, mergé sur `main`) :** application renommée **« Dofus Optimizer »** ;
 polish UI onglet Comptes, onglets pleine largeur, icône poubelle Raccourcis.
 ⚠️ Terminologie : `AccountConfig` (code) = **personnage** (clé = nom de fenêtre) ; l'entité **compte**
@@ -77,6 +77,19 @@ est `GameAccount` (nom historique conservé pour la compat JSON `accounts`, ref 
   Exe renommé **`DofusOptimizer.exe`** (`AssemblyName`). Version **1.1.0**. `schemaVersion 2→3` (migration force
   `CloseMinimizes=true` pour préserver le comportement tray). Nouveau brush `TextOnAccentBrush`. **Instance unique** :
   mutex nommé + `EventWaitHandle` — relancer l'app réveille la fenêtre existante (`App.ShowMainWindow`) au lieu d'un 2ᵉ process.
+
+- **Personnages sans compte de plein droit (Axe 10, v1.2.0)** : l'onglet Comptes fusionne les anciennes
+  zones 1 & 2 en **une seule liste « Connectés »** ordonnée (= ordre de rotation), où chaque personnage
+  connecté — lié à un compte ou non — porte poignée ☰ (glisser), œil (exclusion) et croix (fermeture) ; une
+  ligne non liée ajoute un combo « + Compte » (placeholder non sélectionnable, masqué si aucun compte
+  disponible) + « Lier » (visible seulement quand un compte est choisi), séparés des actions par un léger
+  filet. Un perso sans compte est intégré à la rotation next/prev (déjà le cas) et peut recevoir une
+  **activation directe portée par le personnage** (`AccountConfig.DirectBinding`, réactivé) ; au lien à un
+  compte, ce binding est **transféré au compte** s'il n'en a pas, sinon effacé. En activation directe, le
+  libellé d'un compte = **nom du compte** (entrée unique partagée par tous ses personnages). DnD **fluidifié**
+  (déplacement en place de `ConnectedRows`+`Items`, sans reconstruction). **Aucun changement de schéma**
+  (`Excluded`/`AccountConfig.DirectBinding` déjà dans l'unicité `AllBindings`). VMs de lignes fusionnés en
+  `ConnectedRowViewModel` (remplace `ConnectedAccountViewModel`/`UnlinkedCharacterViewModel`).
 
 **Contraintes techniques actives :**
 - .NET 10 + WPF, MVVM manuel, **zéro NuGet** dans l'app, publish single-file self-contained.
@@ -174,6 +187,15 @@ est `GameAccount` (nom historique conservé pour la compat JSON `accounts`, ref 
   « fermer minimise » est actif. `schemaVersion 2→3` : l'initialiseur `init` ne survit pas à la désérialisation
   source-gen (champ absent → `false`), donc le défaut `true` est porté par la **migration** (configs < v3), pas par
   le seul initialiseur. Le chemin du launcher configuré prime sur l'auto-détection (`AccountsViewModel.SetLauncherPath`).
+- [DT-029] (Axe 10) **Personnages sans compte = participants de plein droit** : amende [DT-025] et [DT-026].
+  L'onglet Comptes fusionne zones 1 & 2 en une **liste unique ordonnée** (`ConnectedRows`) où tout perso
+  connecté (lié ou non) est réordonnable (DnD), excluable et fermable — revient sur la ségrégation par zone
+  de l'Axe 8. Activation directe désormais **bicéphale** : par **compte** pour les liés (`GameAccount.DirectBinding`,
+  libellé = nom du compte, entrée unique tous persos confondus) et par **personnage** pour les non liés
+  (`AccountConfig.DirectBinding` réactivé). Au lien, un binding de perso est **transféré au compte** s'il n'en a
+  pas, sinon effacé (l'unicité `AllBindings` garantit l'absence de conflit). Aucun changement de `schemaVersion`
+  (champs préexistants). DnD **fluidifié** : `PreviewReorder` déplace `ConnectedRows` et `Items` en place
+  (`ObservableCollection.Move`), sans reconstruire les zones.
 
 **Fichiers critiques — ne pas modifier sans discussion :**
 - `src/App/Interop/NativeMethods.cs` (contraintes C-02/C-03).
@@ -185,6 +207,36 @@ est `GameAccount` (nom historique conservé pour la compat JSON `accounts`, ref 
 ## Historique des Axes
 
 <!-- Une entrée par Axe complété. Ajoutée par /finalise. -->
+
+### Axe 10 — Personnages sans compte de plein droit dans la rotation (évolution, 2026-09-26)
+
+**Périmètre livré :** les personnages non liés à un compte deviennent des participants de plein droit de la
+rotation. Onglet Comptes réécrit : zones 1 & 2 fusionnées en **une liste « Connectés » unique et ordonnée**
+(= ordre de rotation) ; chaque ligne (liée ou non) porte glisser ☰, exclusion (œil) et fermeture (croix), une
+ligne non liée ajoutant combo « + Compte » (placeholder non sélectionnable, **masqué si aucun compte
+disponible**) + « Lier » (**visible seulement si un compte est sélectionné**), séparés des actions par un filet.
+Activation directe **par personnage** pour les non liés (`AccountConfig.DirectBinding` réactivé) ; **transfert
+au compte** au moment du lien. En activation directe, libellé = **nom du compte** (entrée unique tous persos).
+Version applicative **1.2.0** ; icône applicative confirmée sur l'exe (`ApplicationIcon`) et la fenêtre/tray.
+
+**Changements structurants :** nouveau `ConnectedRowViewModel` (remplace `ConnectedAccountViewModel` +
+`UnlinkedCharacterViewModel`, supprimés) ; `AccountsViewModel` expose `ConnectedRows` + `ConnectedUnlinkedCharacters`,
+`LinkCharacter` transfère le binding (nouveau callback `applyAccountDirectBinding`), `PreviewReorder` déplace en
+place (DnD fluide). `MainViewModel.BuildRotationSnapshot` agrège les directs par personnage non lié.
+`ShortcutsViewModel` : slots directs par perso sans compte (connecté ∪ persisté-avec-binding), libellé de compte =
+nom du compte (suppression de `ConnectedCharacterOf`). Vue Comptes : template de ligne unique + placeholder combo +
+filet séparateur. `App.csproj` : `Version` 1.2.0.
+
+**Décisions :** [DT-029] persos sans compte de plein droit (amende [DT-025]/[DT-026]) : liste unifiée, activation
+directe bicéphale (compte/personnage) avec transfert au lien, DnD en place, sans changement de schéma.
+
+**Vérifications :** `dotnet build` Debug + Release **0/0** ; `dotnet test` **151/151** (Debug + Release ; 9 nouveaux :
+rotation inclut les non liés, exclusion sautée, direct par perso dans le snapshot, conflit refusé, transfert au lien
+avec/sans binding compte, `CanLink`, perso sans compte absent des déconnectés). Icône exe/DLL vérifiée (hash pixel).
+
+**Dette technique assumée :** rendu réel (liste unifiée, DnD fluide, placeholder/filet, masquage combo) non testable
+unitairement → recette. Cache d'icônes Windows (barre des tâches/Explorateur) peut afficher l'ancienne icône jusqu'au
+rafraîchissement/redémarrage — l'exe et le DLL embarquent bien la nouvelle.
 
 ### Axe 9 — Cycle de session & de vie (évolution, 2026-09-25)
 

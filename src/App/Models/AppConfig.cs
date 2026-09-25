@@ -31,8 +31,32 @@ public sealed record AppConfig(
     List<AccountConfig> Accounts,
     List<GameAccount> GameAccounts)
 {
-    /// <summary>Version de schéma produite par cette version de l'app. v2 : ajout des comptes (v1 = personnages seuls).</summary>
-    public const int CurrentSchemaVersion = 2;
+    /// <summary>
+    /// Chemin de l'exécutable de l'Ankama Launcher (Axe 9, « Ouvrir une session »). Propriété additive hors
+    /// constructeur positionnel : absente d'une config → <c>null</c> (schéma inchangé, pas de migration). Quand
+    /// renseignée, prime sur l'auto-détection ; si aucun chemin utilisable, le bouton d'ouverture est masqué.
+    /// </summary>
+    public string? LauncherPath { get; init; }
+
+    /// <summary>
+    /// Cycle de vie fenêtre (Axe 9) : quand vrai (défaut), fermer la fenêtre [X] <b>minimise</b> l'application
+    /// au lieu de terminer le processus ; quand faux, [X] quitte réellement. Une config antérieure à v3 n'a pas
+    /// le champ (source-gen → <c>false</c>) : la migration v→3 le force à <c>true</c> (comportement tray préservé).
+    /// </summary>
+    public bool CloseMinimizes { get; init; } = true;
+
+    /// <summary>
+    /// Cycle de vie fenêtre (Axe 9) : quand vrai, minimiser (ou fermer si <see cref="CloseMinimizes"/>) masque
+    /// la fenêtre dans la <b>barre d'état</b> (zone de notification) plutôt que dans la barre des tâches.
+    /// Défaut faux (minimisation classique en barre des tâches).
+    /// </summary>
+    public bool MinimizeToTray { get; init; }
+
+    /// <summary>
+    /// Version de schéma produite par cette version de l'app. v2 : comptes (v1 = personnages seuls).
+    /// v3 : cycle de vie fenêtre (<see cref="CloseMinimizes"/>/<see cref="MinimizeToTray"/>).
+    /// </summary>
+    public const int CurrentSchemaVersion = 3;
 
     /// <summary>
     /// Configuration vide par défaut : aucun personnage, aucun compte, associations par défaut

@@ -27,5 +27,12 @@ public sealed class FakeFileDialogService : IFileDialogService
         return _savePath;
     }
 
-    public string? AskOpenPath() => _openPath;
+    /// <summary>Dernier filtre passé à <see cref="AskOpenPath"/>.</summary>
+    public string? LastOpenFilter { get; private set; }
+
+    public string? AskOpenPath(string filter)
+    {
+        LastOpenFilter = filter;
+        return _openPath;
+    }
 }

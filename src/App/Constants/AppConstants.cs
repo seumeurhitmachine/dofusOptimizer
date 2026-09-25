@@ -70,4 +70,27 @@ public static class AppConstants
 
     /// <summary>Filtre des boîtes de dialogue export/import (JSON, US-P04).</summary>
     public const string ConfigFileDialogFilter = "Configuration JSON (*.json)|*.json|Tous les fichiers (*.*)|*.*";
+
+    // --- Cycle de session (Axe 9) : lancement du launcher / fermeture des clients. ---
+
+    /// <summary>
+    /// Fragment de nom de processus de l'Ankama Launcher (comparaison insensible à la casse, sans
+    /// extension). Sert à détecter si le launcher est déjà ouvert (bouton « Ouvrir une session »).
+    /// </summary>
+    public const string AnkamaLauncherProcessName = "Ankama Launcher";
+
+    /// <summary>
+    /// Chemin relatif de l'exécutable du launcher sous <c>%LOCALAPPDATA%</c> (installation par défaut réelle :
+    /// <c>%LOCALAPPDATA%\Programs\Ankama Launcher\Ankama Launcher.exe</c> — le dossier <c>Ankama</c> ne contient
+    /// que les jeux). Auto-détection de repli si aucun chemin n'est configuré (ref <see cref="AnkamaLauncherRegistryFallbackName"/>).
+    /// </summary>
+    public static string AnkamaLauncherLocalAppDataPath { get; } = Path.Combine(
+        "Programs", "Ankama Launcher", "Ankama Launcher.exe");
+
+    /// <summary>Nom de l'exécutable recherché dans le registre <c>App Paths</c> (auto-détection du chemin).</summary>
+    public const string AnkamaLauncherRegistryFallbackName = "Ankama Launcher.exe";
+
+    /// <summary>Filtre de la boîte de dialogue de sélection de l'exécutable du launcher (Réglages, Axe 9).</summary>
+    public const string LauncherFileDialogFilter =
+        "Ankama Launcher (Ankama Launcher.exe)|Ankama Launcher.exe|Exécutables (*.exe)|*.exe|Tous les fichiers (*.*)|*.*";
 }

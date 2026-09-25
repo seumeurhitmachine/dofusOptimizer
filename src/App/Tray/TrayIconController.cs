@@ -22,7 +22,7 @@ namespace DofusSwitcher.Tray;
 /// </summary>
 public sealed class TrayIconController : IDisposable
 {
-    private const string OpenLabel = "Ouvrir la configuration";
+    private const string OpenLabel = "Ouvrir";
     private const string SuspendLabel = "Suspendre l'interception";
     private const string QuitLabel = "Quitter";
 

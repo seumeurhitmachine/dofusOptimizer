@@ -43,6 +43,8 @@ public partial class App : Application
         _windowDetector = new WindowDetector();
         IStartupRegistryService startup = new StartupRegistryService();
         IFileDialogService fileDialog = new FileDialogService();
+        // Cycle de session (Axe 9) : lancement du launcher / fermeture des clients (exception C-02, [DT-027]).
+        ISessionProcessService session = new SessionProcessService();
 
         // Réconcilie le démarrage Windows avec l'intention persistée : re-pointe l'entrée Run vers l'exe
         // courant (chemin changé/réinstallation) ou la retire si l'option est off (RG-T05).
@@ -51,7 +53,17 @@ public partial class App : Application
         // 3. ViewModel racine : reçoit la config, le détecteur et les services (capture, registre, dialogues) ;
         //    le VM Comptes s'abonne dès ici, avant Start, pour capter l'énumération initiale.
         IInputCaptureService inputCapture = new InputCaptureService();
-        var mainViewModel = new MainViewModel(config, _windowDetector, inputCapture, startup, fileDialog);
+        // Sortie réelle (« Terminer session », bouton « Fermer l'application ») : poser ForceClose AVANT
+        // Shutdown() sinon MainWindow.OnClosing l'annule quand « fermer minimise » est actif ; Shutdown()
+        // déclenche OnExit (unhook + flush + dispose tray). La fenêtre est capturée (assignée plus bas).
+        Views.MainWindow? window = null;
+        Action requestShutdown = () =>
+        {
+            if (window is not null) window.ForceClose = true;
+            Current.Shutdown();
+        };
+        var mainViewModel = new MainViewModel(config, _windowDetector, inputCapture, startup, fileDialog,
+            session, requestShutdown);
         mainViewModel.ConfigChanged += _autosave.Notify;
 
         // 4. Interception & bascule de focus (Axe 6) : décision pure → activation → coordinateur.
@@ -64,7 +76,7 @@ public partial class App : Application
         _inputHook = new InputHook(coordinator.Handle);
 
         // 5. Fenêtre principale + tray (référence forte gardée par App, archi §Composition root).
-        var window = new MainWindow { DataContext = mainViewModel };
+        window = new MainWindow { DataContext = mainViewModel };
         _tray = new TrayIconController(window, mainViewModel);
         window.Show();
 

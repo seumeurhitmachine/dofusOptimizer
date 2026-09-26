@@ -5,8 +5,8 @@
 > Mettre à jour à chaque /finalise. Max 30 lignes.
 
 **Dernier Axe complété :** Axe 11 — Clients DOFUS sans personnage + polish session/UI — 2026-09-26
-**Phase :** **Phase 6 — Évolution**. v1.0.0, v1.1.0 & v1.2.0 livrées. Axe 11 livré (évolution sans spec).
-**v1.3.0 prête** (à livrer via `/livraison 1.3.0`) — version applicative portée à `1.3.0` (`App.csproj`).
+**Phase :** **Phase 6 — Évolution**. v1.0.0, v1.1.0, v1.2.0 & **v1.3.0 livrées** (tag `1.3.0`, 2026-09-26).
+Axe 11 livré (évolution sans spec) — version applicative `1.3.0` (`App.csproj`). Dépôt poussé sur GitHub (`origin`).
 Pas d'Axe planifié au-delà (plan-axes = Axes 1→7 ; Axes 8-11 = évolutions cadrées hors plan).
 **Post-v1.0.0 (hors Axe, mergé sur `main`) :** application renommée **« Dofus Optimizer »** ;
 polish UI onglet Comptes, onglets pleine largeur, icône poubelle Raccourcis.

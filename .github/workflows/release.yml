@@ -6,6 +6,13 @@ on:
   push:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+'
+  # Déclenchement manuel (onglet Actions -> Run workflow) : filet de sécurité si le
+  # push de tag ne déclenche pas (ex. workflow ajouté dans le même push que le tag).
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version SemVer à publier (ex. 1.4.0)'
+        required: true
 
 permissions:
   contents: write # créer/mettre à jour la release et y téléverser les artefacts
@@ -29,4 +36,5 @@ jobs:
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./scripts/release.ps1 -Version ${{ github.ref_name }} -Upload
+        # Version = input du dispatch manuel, sinon le nom du tag poussé.
+        run: ./scripts/release.ps1 -Version ${{ github.event.inputs.version || github.ref_name }} -Upload

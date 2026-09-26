@@ -55,6 +55,7 @@ if ($env:GITHUB_TOKEN) { $downloadArgs += @('--token', $env:GITHUB_TOKEN) }
 try { dotnet vpk @downloadArgs } catch { Write-Host "  (aucune release existante — paquet complet)" -ForegroundColor Yellow }
 
 Write-Host "== Empaquetage Velopack ==" -ForegroundColor Cyan
+# --runtime win-x64 : sans lui vpk défaute sur x86, incohérent avec la publication win-x64.
 dotnet vpk pack `
     --packId $packId `
     --packTitle 'Dofus Optimizer' `
@@ -62,6 +63,7 @@ dotnet vpk pack `
     --packDir $publishDir `
     --mainExe $mainExe `
     --icon $iconPath `
+    --runtime win-x64 `
     -o $releaseDir
 
 if ($Upload) {

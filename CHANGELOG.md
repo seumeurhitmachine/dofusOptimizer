@@ -5,6 +5,38 @@ Toutes les évolutions notables de Dofus Optimizer sont consignées dans ce fich
 Le format s'appuie sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
+## [1.2.0] - 2026-09-26
+
+Les personnages sans compte deviennent des participants de plein droit de la
+rotation, et l'onglet Comptes est simplifié en une liste unique des connectés.
+
+### Added
+
+- **Personnages sans compte dans la rotation** : un personnage connecté non lié à
+  un compte peut désormais recevoir un **raccourci d'activation directe** (comme
+  les comptes), et il participe pleinement à la rotation *suivant*/*précédent*.
+- **Lier un personnage à un compte** depuis l'onglet Comptes : chaque ligne non
+  liée propose un menu « + Compte » puis un bouton **« Lier »**. À la liaison, un
+  raccourci direct éventuel du personnage est **transféré au compte** (ou effacé
+  si le compte en possède déjà un).
+
+### Changed
+
+- **Onglet Comptes simplifié** : les personnages connectés — liés à un compte ou
+  non — sont réunis dans une **seule liste « Connectés »** ordonnée (l'ordre = la
+  rotation). Chaque ligne porte la poignée de déplacement, l'œil d'exclusion et la
+  croix de fermeture ; les lignes non liées ajoutent le menu de liaison.
+- Le menu « + Compte » est **masqué s'il n'existe aucun compte disponible**, et le
+  bouton « Lier » n'apparaît **qu'une fois un compte sélectionné**.
+- Glisser-déposer de réordonnancement **plus fluide** (déplacement en place, sans
+  clignotement).
+- En activation directe, le libellé d'un compte affiche le **nom du compte**
+  (raccourci unique partagé par tous ses personnages).
+
+### Note
+
+- Aucune migration : les configurations existantes sont reprises telles quelles.
+
 ## [1.1.0] - 2026-09-25
 
 Distinction Compte/Personnage, ouverture et fermeture des clients depuis

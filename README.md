@@ -4,16 +4,19 @@ Bascule rapide entre plusieurs clients DOFUS, pilotée au clavier et à la souri
 L'application n'interagit jamais avec le processus du jeu : elle s'appuie
 exclusivement sur les API fenêtres Windows (`user32`).
 
-**Version courante : 1.1.0** — 2026-09-25
+**Version courante : 1.2.0** — 2026-09-26
 
 ## Fonctionnalités
 
 - Détection temps réel des clients DOFUS ouverts.
-- Distinction **Compte** / **personnage** : liaison manuelle personnage → compte,
-  onglet Comptes en 3 zones, gestion des comptes dans les Réglages.
-- Rotation cyclique *suivant*/*précédent* entre les comptes, avec saut des comptes
-  absents ou exclus.
-- Activation directe d'un compte par un raccourci dédié.
+- Distinction **Compte** / **personnage** : liaison manuelle personnage → compte
+  depuis l'onglet Comptes, gestion des comptes dans les Réglages.
+- Onglet Comptes en **une liste unique des connectés** (liés ou non), l'ordre de la
+  liste étant l'ordre de rotation.
+- Rotation cyclique *suivant*/*précédent* entre les personnages connectés, avec saut
+  des personnages absents ou exclus.
+- Activation directe par un raccourci dédié, aussi bien pour un compte que pour un
+  personnage sans compte.
 - Raccourcis personnalisables (touche clavier ou bouton souris, boutons
   auxiliaires inclus).
 - Interception conditionnée au focus d'un client DOFUS (aucun effet ailleurs).

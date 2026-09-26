@@ -4,11 +4,13 @@ Bascule rapide entre plusieurs clients DOFUS, pilotée au clavier et à la souri
 L'application n'interagit jamais avec le processus du jeu : elle s'appuie
 exclusivement sur les API fenêtres Windows (`user32`).
 
-**Version courante : 1.2.0** — 2026-09-26
+**Version courante : 1.3.0** — 2026-09-26
 
 ## Fonctionnalités
 
-- Détection temps réel des clients DOFUS ouverts.
+- Détection temps réel des clients DOFUS ouverts, y compris ceux **sans personnage
+  connecté** (écran de sélection, affichés « Dofus 1, 2, 3… ») — fermables et inclus
+  dans la rotation.
 - Distinction **Compte** / **personnage** : liaison manuelle personnage → compte
   depuis l'onglet Comptes, gestion des comptes dans les Réglages.
 - Onglet Comptes en **une liste unique des connectés** (liés ou non), l'ordre de la

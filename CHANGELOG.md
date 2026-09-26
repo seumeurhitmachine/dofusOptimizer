@@ -5,6 +5,34 @@ Toutes les évolutions notables de Dofus Optimizer sont consignées dans ce fich
 Le format s'appuie sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
+## [1.3.0] - 2026-09-26
+
+Prise en charge des clients DOFUS ouverts sans personnage connecté, ouverture de
+session plus souple, et quelques finitions d'interface.
+
+### Added
+
+- **Clients sans personnage dans la rotation** : un client DOFUS ouvert mais **sans
+  personnage connecté** (écran de sélection) apparaît désormais dans la liste des
+  connectés sous le nom « Dofus 1 », « Dofus 2 »… Il est **fermable** et **inclus
+  par défaut dans la rotation**, mais ne peut pas recevoir de raccourci ni être
+  rattaché à un compte.
+- **Réglage « Réduire à l'ouverture d'une session »** : lorsqu'il est activé,
+  Dofus Optimizer se **minimise** automatiquement après un clic sur « Ouvrir une
+  session ». Affiché uniquement si un chemin d'Ankama Launcher est renseigné.
+
+### Changed
+
+- **« Ouvrir une session »** est proposé tant qu'**aucune fenêtre DOFUS n'est
+  ouverte** (même à l'écran de sélection). Si le launcher est déjà ouvert sans
+  client, le bouton **ramène sa fenêtre au premier plan** au lieu d'en relancer un.
+- **Coins de la fenêtre légèrement arrondis** pour un rendu plus moderne
+  (Windows 11).
+
+### Note
+
+- Aucune migration : les configurations existantes sont reprises telles quelles.
+
 ## [1.2.0] - 2026-09-26
 
 Les personnages sans compte deviennent des participants de plein droit de la

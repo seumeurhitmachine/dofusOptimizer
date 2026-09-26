@@ -4,10 +4,10 @@
 
 > Mettre à jour à chaque /finalise. Max 30 lignes.
 
-**Dernier Axe complété :** Axe 10 — Personnages sans compte de plein droit dans la rotation — 2026-09-26
-**Phase :** **Phase 6 — Évolution**. v1.0.0 & v1.1.0 **livrées**. Axe 9 & Axe 10 livrés (évolution sans spec).
-**v1.2.0 prête** (à livrer via `/livraison 1.2.0`) — version applicative portée à `1.2.0` (`App.csproj`).
-Pas d'Axe planifié au-delà (plan-axes = Axes 1→7 ; Axes 8-10 = évolutions cadrées hors plan).
+**Dernier Axe complété :** Axe 11 — Clients DOFUS sans personnage + polish session/UI — 2026-09-26
+**Phase :** **Phase 6 — Évolution**. v1.0.0, v1.1.0 & v1.2.0 livrées. Axe 11 livré (évolution sans spec).
+**v1.3.0 prête** (à livrer via `/livraison 1.3.0`) — version applicative portée à `1.3.0` (`App.csproj`).
+Pas d'Axe planifié au-delà (plan-axes = Axes 1→7 ; Axes 8-11 = évolutions cadrées hors plan).
 **Post-v1.0.0 (hors Axe, mergé sur `main`) :** application renommée **« Dofus Optimizer »** ;
 polish UI onglet Comptes, onglets pleine largeur, icône poubelle Raccourcis.
 ⚠️ Terminologie : `AccountConfig` (code) = **personnage** (clé = nom de fenêtre) ; l'entité **compte**
@@ -90,6 +90,19 @@ est `GameAccount` (nom historique conservé pour la compat JSON `accounts`, ref 
   (déplacement en place de `ConnectedRows`+`Items`, sans reconstruction). **Aucun changement de schéma**
   (`Excluded`/`AccountConfig.DirectBinding` déjà dans l'unicité `AllBindings`). VMs de lignes fusionnés en
   `ConnectedRowViewModel` (remplace `ConnectedAccountViewModel`/`UnlinkedCharacterViewModel`).
+
+- **Clients DOFUS sans personnage (Axe 11, v1.3.0)** : reconnaissance d'un client connecté **sans personnage**
+  (écran de sélection, titre `Dofus <version> - Release` → `DofusWindowRecognizer.IsAnonymousClient`, 2 segments,
+  structurel). Identité **runtime par handle** (`DetectedWindow`/`AccountRuntimeState`/`AccountItemViewModel`
+  portent `HasCharacter`), **jamais persistée** (`MaterializeFromItems` les ignore). Affichés « Dofus N » dans
+  la liste Connectés avec **croix seule** (ni ☰, ni œil, ni compte, ni raccourci — `ConnectedRowViewModel`
+  variante anonyme), inclus dans la rotation next/prev, **sans** activation directe. Gating **« Ouvrir une
+  session »** : masqué dès qu'une fenêtre DOFUS est ouverte (`HasConnectedClients`, anonymes inclus) ; sinon
+  proposé même launcher déjà lancé sans client → l'action **active la fenêtre du launcher**
+  (`ISessionProcessService.TryActivateLauncher`) au lieu d'en relancer un. Réglage **« Réduire à l'ouverture
+  d'une session »** (`AppConfig.MinimizeOnOpenSession`, additif, **sans bump schemaVersion**, affiché si un
+  chemin de launcher est renseigné) → minimise l'app après « Ouvrir une session » (`MainWindow.MinimizeApp`).
+  **Coins de fenêtre arrondis** (DWM `DWMWCP_ROUNDSMALL` au `SourceInitialized`, Windows 11). Version **1.3.0**.
 
 **Contraintes techniques actives :**
 - .NET 10 + WPF, MVVM manuel, **zéro NuGet** dans l'app, publish single-file self-contained.
@@ -196,6 +209,16 @@ est `GameAccount` (nom historique conservé pour la compat JSON `accounts`, ref 
   pas, sinon effacé (l'unicité `AllBindings` garantit l'absence de conflit). Aucun changement de `schemaVersion`
   (champs préexistants). DnD **fluidifié** : `PreviewReorder` déplace `ConnectedRows` et `Items` en place
   (`ObservableCollection.Move`), sans reconstruire les zones.
+- [DT-030] (Axe 11) **Clients DOFUS sans personnage = participants runtime-only** : un client connecté sans
+  personnage (écran de sélection `Dofus <version> - Release`) est reconnu **structurellement** (2 segments,
+  `IsAnonymousClient`, complète [DT-010]), reçoit une **identité synthétique par handle** (préfixe `\0`, sans
+  collision) et n'est **jamais persisté** (hors `AppConfig.Accounts`) : ni compte, ni raccourci, ni
+  exclusion/ordre. Il est affiché « Dofus N » (numéro positionnel) avec fermeture seule et **inclus dans la
+  rotation** (slot rotable, sans `directs`). Le gating « Ouvrir une session » passe de « aucun personnage
+  connecté » à **« aucune fenêtre DOFUS ouverte »** (`HasConnectedClients`, anonymes inclus) ; launcher déjà
+  lancé sans client → activation de sa fenêtre (`TryActivateLauncher`, exception C-02 [DT-027], `MainWindowHandle`
+  du launcher, jamais le jeu). Champ `MinimizeOnOpenSession` additif (défaut false) **sans bump schemaVersion**
+  (comme `LauncherPath`). Coins arrondis = attribut d'affichage DWM sur notre fenêtre (aucun lien C-02/C-03).
 
 **Fichiers critiques — ne pas modifier sans discussion :**
 - `src/App/Interop/NativeMethods.cs` (contraintes C-02/C-03).
@@ -207,6 +230,40 @@ est `GameAccount` (nom historique conservé pour la compat JSON `accounts`, ref 
 ## Historique des Axes
 
 <!-- Une entrée par Axe complété. Ajoutée par /finalise. -->
+
+### Axe 11 — Clients DOFUS sans personnage + polish session/UI (évolution, 2026-09-26)
+
+**Périmètre livré :** les clients DOFUS connectés **sans personnage** (écran de sélection, titre `Dofus
+<version> - Release`) deviennent des participants **runtime-only** de la rotation : détectés
+(`DofusWindowRecognizer.IsAnonymousClient`, 2 segments, structurel), identifiés par handle, affichés « Dofus N »
+avec **croix seule** (ni ☰/œil/compte/raccourci), inclus dans la rotation next/prev, jamais persistés. Gating
+« Ouvrir une session » : **masqué dès qu'une fenêtre DOFUS est ouverte** (anonymes inclus) ; sinon proposé même
+launcher déjà lancé sans client → l'action **active la fenêtre du launcher** (`TryActivateLauncher`) plutôt que
+d'en relancer un. Réglage **« Réduire à l'ouverture d'une session »** (masqué si aucun chemin de launcher) →
+minimise l'app après ouverture. **Coins de fenêtre arrondis** (DWM, Win11). Version applicative **1.3.0**.
+
+**Changements structurants :** `HasCharacter` ajouté à `DetectedWindow`/`AccountRuntimeState`/`AccountItemViewModel`
+(défaut true, additif) ; `WindowDetector` classifie perso vs anonyme (clé synthétique par handle) ; `AccountMerge`
+propage le flag ; `AccountsViewModel` (RebuildZones construit les lignes « Dofus N », `MaterializeFromItems` ignore
+les anonymes, `RefreshSessionState` gate sur `HasConnectedClients`, `OpenSession` active/lance selon l'état,
+callback `onSessionOpened`) ; `ConnectedRowViewModel` 3ᵉ ctor anonyme ; `ISessionProcessService.TryActivateLauncher` ;
+`AppConfig.MinimizeOnOpenSession` (additif) ; `MainViewModel` (setter + `requestMinimize` + wiring) ;
+`SettingsViewModel` (`MinimizeOnOpenSession` + `HasLauncherPath`) ; `MainWindow` (coins DWM au `SourceInitialized`
++ `MinimizeApp`) ; `NativeMethods.DwmSetWindowAttribute`. `App.csproj` : `Version` 1.3.0.
+
+**Décisions :** [DT-030] clients sans personnage runtime-only (identité par handle, jamais persistés, croix seule,
+rotation sans directs ; gating « aucune fenêtre DOFUS ouverte » ; `TryActivateLauncher` sous [DT-027] ;
+`MinimizeOnOpenSession` sans bump schéma ; coins DWM sans lien C-02/C-03).
+
+**Vérifications :** `dotnet build` Debug + Release **0/0** ; `dotnet test` **173/173** (Debug + Release ; +22 :
+recognizer `IsAnonymousClient` 2 segments, merge anonyme runtime-only, ligne « Dofus N » hors raccourcis/liaison,
+rotation inclut l'anonyme sans direct, non-persistance après action, gating `ShowOpenSession` (fenêtre ouverte /
+launcher ouvert sans client), activation du launcher, minimisation à l'ouverture, round-trip `MinimizeOnOpenSession`).
+
+**Dette technique assumée :** rendu réel non testable unitairement → recette : coins arrondis (Win11 ; no-op Win10),
+fenêtres « Dofus N » réelles (écran de sélection), `TryActivateLauncher` réel (fenêtre du launcher ramenée au
+premier plan), minimisation après « Ouvrir une session ». Ordre des « Dofus N » = positionnel (après les persos
+dans `Items`, non réordonnable — cohérent avec l'absence de persistance).
 
 ### Axe 10 — Personnages sans compte de plein droit dans la rotation (évolution, 2026-09-26)
 

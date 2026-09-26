@@ -28,13 +28,18 @@ public sealed class MainViewModel : ObservableObject
         IStartupRegistryService startup,
         IFileDialogService fileDialog,
         ISessionProcessService? session = null,
-        Action? requestShutdown = null)
+        Action? requestShutdown = null,
+        Action? requestMinimize = null)
     {
         Config = config;
+        // Ouverture de session (Axe 11) : après un « Ouvrir une session » réussi, minimiser l'app SI l'option
+        // est active. Le VM Comptes ignore la config : c'est ici (seul lecteur de Config) qu'on décide, puis on
+        // délègue la minimisation réelle à la fenêtre (rappel injecté par la composition root).
+        Action onSessionOpened = () => { if (Config.MinimizeOnOpenSession) requestMinimize?.Invoke(); };
         // `SetAccountDirectBinding` injecté : le transfert du raccourci direct au lien d'un perso sans compte
         // (Axe 10) écrit côté compte via le seul writer des GameAccounts (MainViewModel).
         Accounts = new AccountsViewModel(config.Accounts, detector, config.GameAccounts, session, requestShutdown,
-            SetAccountDirectBinding);
+            SetAccountDirectBinding, onSessionOpened);
         Accounts.SetLauncherPath(config.LauncherPath); // chemin de launcher persisté (Axe 9)
         // Réordonnancement/exclusion/liaison (Axe 4/8) → maj de la config → autosave débouncé (ref [DT-006]).
         Accounts.AccountsChanged += OnAccountsChanged;
@@ -45,8 +50,8 @@ public sealed class MainViewModel : ObservableObject
         Accounts.RuntimeChanged += Shortcuts.OnRuntimeChanged; // connexion/déconnexion → libellés directs à jour
         // Réglages (Axe 7/8) : suspension + démarrage Windows + export/import + CRUD comptes, remontés ici (seul writer).
         Settings = new SettingsViewModel(config, startup, fileDialog, SetInterceptionSuspended, SetStartWithWindows,
-            SetLauncherPath, SetCloseMinimizes, SetMinimizeToTray, ApplyImportedConfig, AddAccount, DeleteAccount,
-            DeleteCharacter, requestShutdown);
+            SetLauncherPath, SetCloseMinimizes, SetMinimizeToTray, SetMinimizeOnOpenSession, ApplyImportedConfig,
+            AddAccount, DeleteAccount, DeleteCharacter, requestShutdown);
     }
 
     /// <summary>Titre affiché dans la barre de la fenêtre.</summary>
@@ -182,6 +187,13 @@ public sealed class MainViewModel : ObservableObject
     private void SetMinimizeToTray(bool enabled)
     {
         Config = Config with { MinimizeToTray = enabled };
+        RaiseConfigChanged();
+    }
+
+    /// <summary>Persiste « réduire l'app à l'ouverture d'une session » (Axe 11). Lu par le callback onSessionOpened.</summary>
+    private void SetMinimizeOnOpenSession(bool enabled)
+    {
+        Config = Config with { MinimizeOnOpenSession = enabled };
         RaiseConfigChanged();
     }
 

@@ -20,11 +20,19 @@ public sealed class AccountItemViewModel : ObservableObject
     public AccountItemViewModel(AccountRuntimeState state)
     {
         CharacterName = state.CharacterName;
+        HasCharacter = state.HasCharacter;
         Apply(state);
     }
 
     /// <summary>Nom de personnage — clé naturelle, immuable pour la durée de vie de l'item (RG-D01).</summary>
     public string CharacterName { get; }
+
+    /// <summary>
+    /// Faux pour un client connecté <b>sans personnage</b> (Axe 11) : jamais persisté, sans compte ni raccourci ;
+    /// affiché « Dofus N » et fermable, inclus dans la rotation. Immuable (une transition sélection↔jeu change
+    /// la clé donc l'item). Pilote le rendu et l'exclusion de la persistance.
+    /// </summary>
+    public bool HasCharacter { get; }
 
     /// <summary>Vrai si une fenêtre DOFUS correspondante existe actuellement (RG-D02).</summary>
     public bool IsConnected

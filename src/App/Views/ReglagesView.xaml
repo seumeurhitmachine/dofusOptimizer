@@ -393,6 +393,25 @@
                             Content="Parcourir…"
                             Command="{Binding BrowseLauncherCommand}" />
                 </Grid>
+
+                <!-- Réduire l'app à l'ouverture d'une session (Axe 11). Affiché seulement si un chemin de
+                     launcher est renseigné (sinon « Ouvrir une session » n'est de toute façon pas proposé). -->
+                <Grid Style="{StaticResource OptionRowStyle}" Margin="0,10,0,0"
+                      Visibility="{Binding HasLauncherPath, Converter={StaticResource BoolToVisibility}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock Text="Réduire à l'ouverture d'une session" FontSize="13" Foreground="{StaticResource TextPrimaryBrush}" />
+                        <TextBlock Text="Minimise Dofus Optimizer après « Ouvrir une session »"
+                                   FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <CheckBox Grid.Column="1"
+                              Style="{StaticResource ToggleSwitchStyle}"
+                              IsChecked="{Binding MinimizeOnOpenSession}"
+                              AutomationProperties.Name="Réduire à l'ouverture d'une session" />
+                </Grid>
             </StackPanel>
 
             <Border Margin="0,4,0,12" BorderBrush="{StaticResource SurfaceAltBrush}" BorderThickness="0,1,0,0" />

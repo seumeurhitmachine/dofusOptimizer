@@ -30,6 +30,12 @@ public sealed class FakeSessionProcessService : ISessionProcessService
     /// <summary>Handles passés à <see cref="KillByHandle"/>, dans l'ordre.</summary>
     public List<nint> KilledHandles { get; } = [];
 
+    /// <summary>Nombre d'appels à <see cref="TryActivateLauncher"/> (Axe 11).</summary>
+    public int ActivateCount { get; private set; }
+
+    /// <summary>Valeur renvoyée par <see cref="TryActivateLauncher"/>.</summary>
+    public bool ActivateSucceeds { get; set; } = true;
+
     public bool IsLauncherRunning() => LauncherRunning;
 
     /// <summary>Renvoie le chemin configuré s'il est non vide (priorité), sinon le chemin « auto-détecté » simulé.</summary>
@@ -44,6 +50,12 @@ public sealed class FakeSessionProcessService : ISessionProcessService
         LaunchCount++;
         LastLaunchedPath = launcherPath;
         return LaunchSucceeds;
+    }
+
+    public bool TryActivateLauncher()
+    {
+        ActivateCount++;
+        return ActivateSucceeds;
     }
 
     public void KillByHandle(nint hWnd) => KilledHandles.Add(hWnd);

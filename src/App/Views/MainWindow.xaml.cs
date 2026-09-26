@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
+using DofusSwitcher.Interop;
 using DofusSwitcher.ViewModels;
 
 // [WARN] UseWPF + UseWindowsForms exposent deux Application/TabControl. Lever l'ambiguïté vers WPF.
@@ -28,7 +30,27 @@ public partial class MainWindow : Window
         InitializeComponent();
     }
 
+    /// <summary>
+    /// Coins légèrement arrondis (Axe 11) : dès que le handle natif existe, on demande la préférence de coins
+    /// DWM (Windows 11 ; ignoré silencieusement sous Windows 10). Attribut d'affichage sur NOTRE fenêtre —
+    /// aucun lien avec C-02/C-03. [WARN] À faire au SourceInitialized : le HWND n'existe pas avant.
+    /// </summary>
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        var hwnd = new WindowInteropHelper(this).Handle;
+        var preference = NativeMethods.DWMWCP_ROUNDSMALL;
+        _ = NativeMethods.DwmSetWindowAttribute(hwnd, NativeMethods.DWMWA_WINDOW_CORNER_PREFERENCE, ref preference, sizeof(int));
+    }
+
     private SettingsViewModel? Settings => (DataContext as MainViewModel)?.Settings;
+
+    /// <summary>
+    /// Minimise l'application (Axe 11, « Réduire à l'ouverture d'une session ») : masque dans la barre d'état si
+    /// l'option <c>MinimizeToTray</c> est active, sinon minimisation classique. Appelé via le rappel injecté au
+    /// <see cref="MainViewModel"/> par la composition root.
+    /// </summary>
+    public void MinimizeApp() => MinimizeWindow(Settings?.MinimizeToTray ?? false);
 
     /// <summary>
     /// Fermer la fenêtre [X] : selon les réglages (Axe 9), minimise l'application (barre d'état ou barre des

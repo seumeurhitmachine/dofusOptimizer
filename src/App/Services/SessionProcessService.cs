@@ -57,6 +57,37 @@ public sealed class SessionProcessService : ISessionProcessService
     }
 
     /// <inheritdoc/>
+    public bool TryActivateLauncher()
+    {
+        // [ARCH] Exception C-02 bornée (ref [DT-027]) : on lit le MainWindowHandle du process launcher (jamais
+        // du jeu) et on l'active via les API fenêtres (non synthétique, C-03). Aucune inspection mémoire.
+        foreach (var process in Process.GetProcesses())
+        {
+            try
+            {
+                if (!process.ProcessName.Contains(AppConstants.AnkamaLauncherProcessName, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var hwnd = process.MainWindowHandle;
+                if (hwnd == 0) continue; // process sans fenêtre principale (sous-process Electron) : suivant
+
+                if (NativeMethods.IsIconic(hwnd)) NativeMethods.ShowWindow(hwnd, NativeMethods.SW_RESTORE);
+                NativeMethods.SetForegroundWindow(hwnd);
+                return true;
+            }
+            catch
+            {
+                // Process disparu / accès refusé entre l'énumération et la lecture : ignorer.
+            }
+            finally
+            {
+                process.Dispose();
+            }
+        }
+        return false;
+    }
+
+    /// <inheritdoc/>
     public void KillByHandle(nint hWnd)
     {
         if (hWnd == 0) return;

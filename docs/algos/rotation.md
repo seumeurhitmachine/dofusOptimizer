@@ -1,6 +1,6 @@
 # Algo — Rotation & décision d'interception
 
-**Dernière mise à jour :** 2026-09-24 — Axe 6 (création)
+**Dernière mise à jour :** 2026-09-26 — Axe 11 (clients sans personnage dans les slots)
 **Implémentation :** `src/App/Services/SwitchController.cs` (pur), pilotée par `SwitchCoordinator`
 **Specs :** `docs/specs/switching.md §2.4/§2.5/§2.6` — CA-01, CA-02, CA-03, C-01, RG-S01..S03/S06
 
@@ -18,8 +18,12 @@
   - L'ordre des `slots` **est** l'ordre de rotation (data-model §AppConfig).
   - Les `slots` couvrent **tous** les personnages (`AppConfig.Accounts`), qu'ils soient liés à un compte
     ou non : un personnage **sans compte** connecté est un participant de plein droit (Axe 10, [DT-029]).
+    S'y ajoutent les **clients sans personnage** (écran de sélection, Axe 11, [DT-030]) : purement runtime
+    (identité=handle, jamais persistés), ils sont des slots **rotables** comme les autres, mais **sans**
+    entrée dans `directs` (pas de raccourci direct).
   - `directs` agrège l'activation directe **par compte** (`GameAccount.DirectBinding` → perso lié connecté,
     [DT-025]) **et par personnage** pour les non liés (`AccountConfig.DirectBinding` → ce perso, Axe 10).
+    Les clients sans personnage n'y figurent jamais.
 - `input` : entrée captée (`Binding`).
 - `foreground` : HWND de la fenêtre au premier plan.
 
@@ -76,3 +80,4 @@ revient au premier présent (CA-01). Un compte absent au milieu est ignoré (CA-
 |---|---|---|
 | Axe 6 | 2026-09-24 | Création : décision d'interception + rotation cyclique (saut absents/exclus), activation directe. |
 | Axe 10 | 2026-09-25 | Précision : les `slots` et `directs` intègrent les personnages **sans compte** (participants de plein droit ; activation directe portée par le personnage). Algorithme inchangé. |
+| Axe 11 | 2026-09-26 | Précision : les **clients sans personnage** (runtime-only, « Dofus N ») sont des `slots` rotables mais **sans** `directs` (pas de raccourci). Algorithme inchangé. |

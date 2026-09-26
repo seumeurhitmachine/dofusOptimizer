@@ -243,4 +243,20 @@ internal static unsafe partial class NativeMethods
     [LibraryImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static partial bool AttachThreadInput(uint idAttach, uint idAttachTo, [MarshalAs(UnmanagedType.Bool)] bool fAttach);
+
+    // --- Aspect de NOTRE fenêtre (Axe 11, coins arrondis Win11). Aucun lien C-02/C-03 : attribut d'affichage
+    //     DWM appliqué à la fenêtre de l'application elle-même, jamais à un client DOFUS ni au processus du jeu. ---
+
+    /// <summary>Attribut DWM « préférence de coins » (Windows 11) — <c>DWMWA_WINDOW_CORNER_PREFERENCE</c>.</summary>
+    internal const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
+
+    /// <summary>Coins légèrement arrondis (<c>DWMWCP_ROUNDSMALL</c>) — « un tout petit peu ronds ».</summary>
+    internal const int DWMWCP_ROUNDSMALL = 3;
+
+    /// <summary>
+    /// Applique un attribut DWM à une fenêtre (ici : préférence de coins arrondis sur notre propre fenêtre).
+    /// No-op silencieux sous Windows 10 (l'attribut est ignoré). Renvoie un HRESULT (ignoré).
+    /// </summary>
+    [LibraryImport("dwmapi.dll")]
+    internal static partial int DwmSetWindowAttribute(nint hwnd, int dwAttribute, ref int pvAttribute, int cbAttribute);
 }

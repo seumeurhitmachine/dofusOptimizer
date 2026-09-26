@@ -50,12 +50,19 @@ public class SessionProcessTests
     }
 
     [Fact]
-    public void LauncherOuvert_BoutonOuvrirMasque()
+    public void LauncherOuvert_BoutonToujoursVisible_EtActiveLaFenetre()
     {
+        // Axe 11 : « Ouvrir une session » est proposé tant qu'aucun PERSONNAGE n'est connecté — même launcher
+        // déjà ouvert. Dans ce cas, l'action ramène la fenêtre du launcher au premier plan (pas de relance).
         var session = new FakeSessionProcessService { LauncherRunning = true };
         var vm = new AccountsViewModel([], new FakeWindowDetector(), null, session);
 
-        Assert.False(vm.ShowOpenSession);
+        Assert.True(vm.ShowOpenSession);
+
+        vm.OpenSessionCommand.Execute(null);
+
+        Assert.Equal(1, session.ActivateCount);
+        Assert.Equal(0, session.LaunchCount);
     }
 
     [Fact]
@@ -113,15 +120,15 @@ public class SessionProcessTests
     // --- Lancement. ---
 
     [Fact]
-    public void OuvrirSession_LanceLeLauncher_PuisMasqueLeBouton()
+    public void OuvrirSession_LauncherAbsent_LanceLeLauncher()
     {
-        var session = new FakeSessionProcessService();
+        var session = new FakeSessionProcessService(); // LauncherRunning = false
         var vm = new AccountsViewModel([], new FakeWindowDetector(), null, session);
 
         vm.OpenSessionCommand.Execute(null);
 
         Assert.Equal(1, session.LaunchCount);
-        Assert.False(vm.ShowOpenSession); // masqué sans attendre le prochain événement fenêtre
+        Assert.Equal(0, session.ActivateCount); // launcher absent → lancement, pas d'activation
     }
 
     // --- Force-kill par ligne. ---

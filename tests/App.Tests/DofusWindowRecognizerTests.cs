@@ -50,4 +50,35 @@ public class DofusWindowRecognizerTests
     {
         Assert.False(DofusWindowRecognizer.IsDofusWindow(title, className));
     }
+
+    // ---- Client SANS personnage (Axe 11) : « Dofus <version> - Type » (2 segments) ----
+
+    [Theory]
+    [InlineData("Dofus 3.6.12.16 - Release")]
+    [InlineData("Dofus 2.70.0 - Beta")]         // type ≠ Release accepté (ancre = « Dofus » + version)
+    [InlineData("  Dofus 3.6.12.16 - Release  ")] // espaces de bord tolérés
+    public void IsAnonymousClient_VraiPourEcranDeSelectionUnity(string title)
+    {
+        Assert.True(DofusWindowRecognizer.IsAnonymousClient(title, "UnityWndClass"));
+        Assert.Null(DofusWindowRecognizer.ExtractCharacterName(title)); // pas un personnage
+    }
+
+    [Theory]
+    [InlineData("Dofus 3.6.12.16 - Release", "Chrome_WidgetWin_1")]         // bonne forme, mauvaise classe
+    [InlineData("Dofus", "UnityWndClass")]                                   // lancement initial (1 segment)
+    [InlineData("Dofus - Release", "UnityWndClass")]                         // « Dofus » sans version
+    [InlineData("Dofus 3.6.12.16", "UnityWndClass")]                         // pas de type (1 segment)
+    [InlineData("Seumeurblood - Sacrieur - 3.6.12.16 - Release", "UnityWndClass")] // client en jeu (perso)
+    public void IsAnonymousClient_FauxHorsFormat(string title, string className)
+    {
+        Assert.False(DofusWindowRecognizer.IsAnonymousClient(title, className));
+    }
+
+    [Fact]
+    public void PersoNommeDofus_ResteUnPersonnage_PasUnClientAnonyme()
+    {
+        const string title = "Dofus - Iop - 3.6.12.16 - Release"; // 4 segments : « Dofus » = nom de perso
+        Assert.Equal("Dofus", DofusWindowRecognizer.ExtractCharacterName(title));
+        Assert.False(DofusWindowRecognizer.IsAnonymousClient(title, "UnityWndClass"));
+    }
 }

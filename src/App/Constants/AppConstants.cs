@@ -104,4 +104,13 @@ public static class AppConstants
 
     /// <summary>Lien de soutien (Ko-fi) ouvert par le bouton « Soutenir » de l'onglet Paramètres.</summary>
     public const string SupportUrl = "https://ko-fi.com/seumeurhitmatchine";
+
+    // --- Mises à jour automatiques (Velopack, packaging). ---
+
+    /// <summary>
+    /// Dépôt GitHub source des mises à jour automatiques. Les artefacts de release (installateur +
+    /// packages + fichiers RELEASES) sont publiés dans les GitHub Releases de ce dépôt ; l'app y cherche
+    /// une version plus récente au démarrage (<see cref="Services.IUpdateService"/>). Réf : docs/packaging.md.
+    /// </summary>
+    public const string UpdateFeedRepoUrl = "https://github.com/seumeurhitmachine/dofusOptimizer";
 }

@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Windows;
+using Velopack;
 using DofusSwitcher.Constants;
 using DofusSwitcher.Persistence;
 using DofusSwitcher.Services;
@@ -34,6 +35,14 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        // 0-bis. Velopack (auto-update) : DOIT s'exécuter avant toute logique applicative. Lors des hooks de
+        //   cycle de vie (install/update/désinstallation), l'installateur relance l'exe avec des arguments
+        //   spéciaux ; Run() les traite puis termine le process — la fenêtre ne s'affiche jamais dans ce cas.
+        //   En lancement normal, Run() rend la main immédiatement. [DECISION] Placé ici (et non dans un Main
+        //   explicite) pour ne pas réintroduire le conflit de point d'entrée WPF documenté dans App.csproj ;
+        //   c'est la 1ʳᵉ instruction d'OnStartup, avant même base.OnStartup et le mutex d'instance unique.
+        VelopackApp.Build().Run();
+
         base.OnStartup(e);
 
         // [DECISION] Axe 7 (lève [DT-012]) : l'app vit dans le tray. Fermer la dernière fenêtre ne quitte
@@ -108,6 +117,11 @@ public partial class App : Application
         //    soient servis par la file de messages du thread UI déjà en pompe (archi §Threading, RG-D05/S06).
         _windowDetector.Start();
         _inputHook.Start();
+
+        // 7. Auto-update (Velopack) : vérification en arrière-plan, sans bloquer le démarrage. Fire-and-forget
+        //    — le service avale ses erreurs et n'applique la MAJ qu'à la prochaine fermeture (sans-op en dev).
+        IUpdateService updates = new UpdateService();
+        _ = updates.CheckAndStageAsync();
     }
 
     /// <summary>Affiche et active la fenêtre principale (réveil par une 2ᵉ instance). Sur le thread UI.</summary>

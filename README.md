@@ -31,6 +31,17 @@ exclusivement sur les API fenêtres Windows (`user32`).
 - Suspension globale, démarrage avec Windows (optionnel), export/import de la
   configuration.
 
+## Installation
+
+1. Télécharger `Setup.exe` depuis la [dernière release](https://github.com/seumeurhitmachine/dofusOptimizer/releases).
+2. Lancer `Setup.exe`. L'application s'installe et se met **à jour automatiquement** ensuite.
+
+> **Avertissement Windows au premier lancement.** L'application n'est pas signée par
+> un certificat payant : Windows SmartScreen peut afficher « Windows a protégé votre
+> ordinateur ». C'est normal pour un logiciel gratuit non signé. Cliquer sur
+> **« Informations complémentaires »** puis **« Exécuter quand même »**. Cette étape
+> n'apparaît qu'à la première installation ; les mises à jour suivantes sont silencieuses.
+
 ## Prérequis
 
 - Windows 10/11 (x64).

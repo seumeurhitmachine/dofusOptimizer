@@ -4,10 +4,11 @@
 
 > Mettre à jour à chaque /finalise. Max 30 lignes.
 
-**Dernier Axe complété :** Axe 11 — Clients DOFUS sans personnage + polish session/UI — 2026-09-26
-**Phase :** **Phase 6 — Évolution**. v1.0.0, v1.1.0, v1.2.0 & **v1.3.0 livrées** (tag `1.3.0`, 2026-09-26).
-Axe 11 livré (évolution sans spec) — version applicative `1.3.0` (`App.csproj`). Dépôt poussé sur GitHub (`origin`).
-Pas d'Axe planifié au-delà (plan-axes = Axes 1→7 ; Axes 8-11 = évolutions cadrées hors plan).
+**Dernier Axe complété :** Packaging & auto-update (Velopack) — évolution sans `/axe` formel — 2026-09-26
+**Phase :** **Phase 6 — Évolution**. v1.0.0→v1.3.0 livrées (tags sans préfixe `v`, ex. `1.3.0`). **v1.4.0 préparée**
+(packaging Velopack : `App.csproj` 1.4.0 + CHANGELOG + README) sur la branche `axe-12-packaging-velopack` —
+**reste à merger sur `main` + créer/pousser le tag `1.4.0`** (déclenche la CI de release). Dépôt sur GitHub (`origin`).
+Pas d'Axe planifié au-delà (plan-axes = Axes 1→7 ; Axes 8-11 + packaging = évolutions cadrées hors plan).
 **Post-v1.0.0 (hors Axe, mergé sur `main`) :** application renommée **« Dofus Optimizer »** ;
 polish UI onglet Comptes, onglets pleine largeur, icône poubelle Raccourcis.
 ⚠️ Terminologie : `AccountConfig` (code) = **personnage** (clé = nom de fenêtre) ; l'entité **compte**
@@ -104,8 +105,17 @@ est `GameAccount` (nom historique conservé pour la compat JSON `accounts`, ref 
   chemin de launcher est renseigné) → minimise l'app après « Ouvrir une session » (`MainWindow.MinimizeApp`).
   **Coins de fenêtre arrondis** (DWM `DWMWCP_ROUNDSMALL` au `SourceInitialized`, Windows 11). Version **1.3.0**.
 
+- **Packaging & auto-update (Velopack)** : installateur `Setup.exe` + mises à jour automatiques depuis
+  les GitHub Releases (`seumeurhitmachine/dofusOptimizer`). `VelopackApp.Build().Run()` en 1ʳᵉ instruction
+  d'`OnStartup` ; `IUpdateService`/`UpdateService` (GithubSource) vérifie au démarrage, télécharge, applique
+  **à la prochaine fermeture** (`WaitExitThenApplyUpdates`, sans-op en dev/hors ligne). Publish cible Velopack
+  = self-contained **sans single-file** (`-p:VelopackPack=true`, delta updates). Outillage : `.config/dotnet-tools.json`
+  (`vpk`), `scripts/release.ps1`, `.github/workflows/release.yml` (publie sur tag SemVer). Doc : `docs/packaging.md`.
+  ⚠️ Suivis : SmartScreen (pas de cert) ; « démarrer avec Windows » vs dossier versionné Velopack (à valider recette).
+
 **Contraintes techniques actives :**
-- .NET 10 + WPF, MVVM manuel, **zéro NuGet** dans l'app, publish single-file self-contained.
+- .NET 10 + WPF, MVVM manuel, **zéro NuGet** dans l'app **sauf Velopack** (packaging/auto-update, [DECISION]
+  2026-09-26). Publish single-file self-contained hors Velopack ; self-contained en vrac pour Velopack.
 - C-02 : aucune interaction avec le processus DOFUS pour la **reconnaissance/le jeu** (API fenêtres `user32`
   seules). **Exception assumée [DT-027]** (Axe 9) : le *cycle de session* peut lancer le launcher et force-kill
   les clients (`System.Diagnostics.Process`), isolé dans `SessionProcessService`. Toujours aucune injection,
@@ -219,6 +229,11 @@ est `GameAccount` (nom historique conservé pour la compat JSON `accounts`, ref 
   lancé sans client → activation de sa fenêtre (`TryActivateLauncher`, exception C-02 [DT-027], `MainWindowHandle`
   du launcher, jamais le jeu). Champ `MinimizeOnOpenSession` additif (défaut false) **sans bump schemaVersion**
   (comme `LauncherPath`). Coins arrondis = attribut d'affichage DWM sur notre fenêtre (aucun lien C-02/C-03).
+- [DT-031] (Packaging) **Velopack = seule dépendance NuGet runtime tolérée**, exception explicite à la
+  contrainte « zéro NuGet » (autorisée 2026-09-26). Justification : installateur + auto-update impossibles
+  sans lib dédiée. Contreparties : `VelopackApp.Build().Run()` en tête d'`OnStartup` ; publish Velopack
+  self-contained **sans single-file** (delta updates) tout en conservant la cible single-file historique ;
+  MAJ appliquées **à la fermeture** (non intrusif) ; feed = GitHub Releases. Réf : `docs/packaging.md`.
 
 **Fichiers critiques — ne pas modifier sans discussion :**
 - `src/App/Interop/NativeMethods.cs` (contraintes C-02/C-03).
@@ -230,6 +245,32 @@ est `GameAccount` (nom historique conservé pour la compat JSON `accounts`, ref 
 ## Historique des Axes
 
 <!-- Une entrée par Axe complété. Ajoutée par /finalise. -->
+
+### Packaging & auto-update (Velopack) — évolution, 2026-09-26
+
+**Périmètre livré :** distribution de l'app via **installateur `Setup.exe` + mises à jour automatiques**
+(Velopack, feed = GitHub Releases `seumeurhitmachine/dofusOptimizer`). `VelopackApp.Build().Run()` en 1ʳᵉ
+instruction d'`OnStartup` (hooks install/update/désinstallation) ; `IUpdateService`/`UpdateService`
+(GithubSource) vérifie au démarrage, télécharge, applique **à la prochaine fermeture**
+(`WaitExitThenApplyUpdates`) — non intrusif, sans-op en dev/hors ligne, erreurs avalées.
+
+**Changements structurants :** `App.csproj` gagne l'unique `PackageReference` runtime (`Velopack 1.2.158`,
+exception explicite à « zéro NuGet ») ; `Directory.Build.props` : cible `-p:VelopackPack=true` self-contained
+**sans single-file** (delta updates), cible single-file historique conservée hors Velopack ;
+`AppConstants.UpdateFeedRepoUrl`. Outillage : `.config/dotnet-tools.json` (`vpk` en dev-tool local),
+`scripts/release.ps1` (publish → `vpk download` deltas → `vpk pack`, `-Upload` optionnel),
+`.github/workflows/release.yml` (publie sur tag SemVer). Docs : `docs/packaging.md`, README §Installation.
+
+**Décisions :** [DT-031] Velopack = seule dépendance NuGet runtime tolérée (installateur + auto-update).
+Signature de code : **non signé assumé** (pas de cert payant) — SmartScreen averti au 1ᵉʳ lancement,
+contournement documenté (README) ; friction ponctuelle, MAJ auto non concernées ; porte de sortie éventuelle
+= Azure Trusted Signing (~10 $/mois).
+
+**Dette technique assumée :** réputation SmartScreen non signée = par hash (ne s'accumule pas entre versions) ;
+« démarrer avec Windows » (`StartupRegistryService`) écrit le chemin exe courant → interaction avec le dossier
+versionné Velopack **à valider en recette**.
+
+**Vérifications :** `dotnet build` Release app **0/0** + projet tests **0/0** ; `dotnet tool restore` (`vpk`) OK.
 
 ### Axe 11 — Clients DOFUS sans personnage + polish session/UI (évolution, 2026-09-26)
 

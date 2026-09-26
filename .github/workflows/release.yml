@@ -1,0 +1,32 @@
+name: Release
+
+# Déclenché en poussant un tag de version SemVer (ex. `1.4.0`), cohérent avec le tagging existant
+# du dépôt (tag `1.3.0`). Construit le paquet Velopack et le publie dans les GitHub Releases.
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write # créer/mettre à jour la release et y téléverser les artefacts
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore tools
+        run: dotnet tool restore
+
+      - name: Build & publish Velopack release
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./scripts/release.ps1 -Version ${{ github.ref_name }} -Upload

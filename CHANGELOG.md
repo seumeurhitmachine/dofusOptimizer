@@ -5,6 +5,28 @@ Toutes les évolutions notables de Dofus Optimizer sont consignées dans ce fich
 Le format s'appuie sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
+## [1.4.0] - 2026-09-26
+
+Installation simplifiée et **mises à jour automatiques** : Dofus Optimizer se
+distribue désormais via un installateur et se tient à jour tout seul.
+
+### Added
+
+- **Installateur** : l'application s'installe via un `Setup.exe` téléchargeable
+  depuis les *releases* GitHub, avec raccourcis et désinstallation propre.
+- **Mises à jour automatiques** : au démarrage, l'application vérifie en arrière-plan
+  s'il existe une version plus récente, la télécharge et l'**installe silencieusement
+  à la prochaine fermeture** — sans interruption ni manipulation.
+
+### Note
+
+- **Avertissement Windows au premier lancement** : l'application n'étant pas signée
+  par un certificat payant, SmartScreen peut afficher « Windows a protégé votre
+  ordinateur ». Cliquer sur « Informations complémentaires » → « Exécuter quand
+  même ». Cette étape n'apparaît qu'à la première installation ; les mises à jour
+  suivantes sont silencieuses.
+- Aucune migration : les configurations existantes sont reprises telles quelles.
+
 ## [1.3.0] - 2026-09-26
 
 Prise en charge des clients DOFUS ouverts sans personnage connecté, ouverture de

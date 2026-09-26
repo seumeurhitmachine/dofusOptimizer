@@ -24,11 +24,25 @@
     et cela évite de publier le projet de tests en single-file.
     [ARCH] Jamais de PublishTrimmed/PublishAot : WPF casse le rendu XAML.
   -->
-  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != '' and '$(VelopackPack)' != 'true'">
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <PublishTrimmed>false</PublishTrimmed>
+  </PropertyGroup>
+
+  <!--
+    Publication pour Velopack (auto-update + installateur) : activée par `-p:VelopackPack=true`
+    (voir scripts/release.ps1). Self-contained MAIS PAS single-file : Velopack empaquette lui-même
+    l'application et a besoin des fichiers « en vrac » pour calculer les mises à jour différentielles
+    (delta updates). [DECISION] Exception au single-file figé, cohérente avec l'adoption de Velopack.
+    [ARCH] Toujours ni PublishTrimmed ni PublishAot (WPF casse).
+  -->
+  <PropertyGroup Condition="'$(VelopackPack)' == 'true'">
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>false</PublishSingleFile>
     <PublishReadyToRun>true</PublishReadyToRun>
     <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>

@@ -4,7 +4,7 @@ Bascule rapide entre plusieurs clients DOFUS, pilotée au clavier et à la souri
 L'application n'interagit jamais avec le processus du jeu : elle s'appuie
 exclusivement sur les API fenêtres Windows (`user32`).
 
-**Version courante : 1.3.0** — 2026-09-26
+**Version courante : 1.4.0** — 2026-09-26
 
 ## Fonctionnalités
 
@@ -30,6 +30,19 @@ exclusivement sur les API fenêtres Windows (`user32`).
 - Icône de zone de notification (tray) : suspendre/réactiver, ouvrir, quitter.
 - Suspension globale, démarrage avec Windows (optionnel), export/import de la
   configuration.
+- **Installateur** et **mises à jour automatiques** (silencieuses, appliquées à la
+  fermeture de l'application).
+
+## Installation
+
+1. Télécharger `Setup.exe` depuis la [dernière release](https://github.com/seumeurhitmachine/dofusOptimizer/releases).
+2. Lancer `Setup.exe`. L'application s'installe et se met **à jour automatiquement** ensuite.
+
+> **Avertissement Windows au premier lancement.** L'application n'est pas signée par
+> un certificat payant : Windows SmartScreen peut afficher « Windows a protégé votre
+> ordinateur ». C'est normal pour un logiciel gratuit non signé. Cliquer sur
+> **« Informations complémentaires »** puis **« Exécuter quand même »**. Cette étape
+> n'apparaît qu'à la première installation ; les mises à jour suivantes sont silencieuses.
 
 ## Prérequis
 

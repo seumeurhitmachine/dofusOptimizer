@@ -1,9 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    [ARCH] Application livrée = ZÉRO PackageReference. Tout vient du SDK .NET
-    (WPF, WinForms, System.Text.Json, interop Win32). Réf : ARCHI-DOTNET-WPF.md.
-    Les propriétés TFM/Nullable/UseWPF/UseWindowsForms + publication sont dans
+    [ARCH] Application livrée = ZÉRO PackageReference SAUF packaging/mise à jour.
+    Tout le fonctionnel vient du SDK .NET (WPF, WinForms, System.Text.Json, interop Win32).
+    [DECISION] Exception autorisée (2026-09-26) : Velopack (auto-update + installer). C'est la
+    seule dépendance runtime tolérée ; elle porte l'installateur, les hooks install/update et le
+    téléchargement des MAJ, choses impossibles à faire sans lib dédiée. Réf : docs/packaging.md,
+    ARCHI-DOTNET-WPF.md. Les propriétés TFM/Nullable/UseWPF/UseWindowsForms + publication sont dans
     Directory.Build.props (racine).
   -->
   <PropertyGroup>
@@ -15,7 +18,7 @@
     <RootNamespace>DofusSwitcher</RootNamespace>
     <AssemblyName>DofusOptimizer</AssemblyName>
     <!-- Version applicative (affichée dans l'à-propos via Assembly.GetName().Version). -->
-    <Version>1.3.0</Version>
+    <Version>1.4.0</Version>
     <!-- [DECISION] Axe 3 : requis pour les pointeurs de fonction (delegate* unmanaged) et les
          callbacks [UnmanagedCallersOnly] de la détection. [LibraryImport] ne marshale pas les
          délégués (SYSLIB1051) ; les pointeurs de fonction sont la voie compatible source-gen.
@@ -29,6 +32,12 @@
     <Resource Include="Resources/app.ico" />
     <!-- Logo vectoriel rastérisé (PNG transparent) : affiché dans le bandeau personnalisé de la fenêtre. -->
     <Resource Include="Resources/logo.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- [DECISION] Seule dépendance runtime de l'app (exception documentée en tête de fichier) :
+         auto-update + installateur. Version épinglée (stable). -->
+    <PackageReference Include="Velopack" Version="1.2.158" />
   </ItemGroup>
 
 </Project>

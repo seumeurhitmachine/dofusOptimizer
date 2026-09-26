@@ -24,6 +24,7 @@ packages/*/node_modules/
 # Build & artefacts
 dist/
 build/
+artifacts/
 out/
 .next/
 .nuxt/

@@ -4,7 +4,7 @@ Bascule rapide entre plusieurs clients DOFUS, pilotée au clavier et à la souri
 L'application n'interagit jamais avec le processus du jeu : elle s'appuie
 exclusivement sur les API fenêtres Windows (`user32`).
 
-**Version courante : 1.3.0** — 2026-09-26
+**Version courante : 1.4.0** — 2026-09-26
 
 ## Fonctionnalités
 
@@ -30,6 +30,8 @@ exclusivement sur les API fenêtres Windows (`user32`).
 - Icône de zone de notification (tray) : suspendre/réactiver, ouvrir, quitter.
 - Suspension globale, démarrage avec Windows (optionnel), export/import de la
   configuration.
+- **Installateur** et **mises à jour automatiques** (silencieuses, appliquées à la
+  fermeture de l'application).
 
 ## Installation
 

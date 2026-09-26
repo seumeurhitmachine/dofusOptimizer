@@ -5,8 +5,9 @@
 > Mettre à jour à chaque /finalise. Max 30 lignes.
 
 **Dernier Axe complété :** Packaging & auto-update (Velopack) — évolution sans `/axe` formel — 2026-09-26
-**Phase :** **Phase 6 — Évolution**. v1.0.0→v1.3.0 livrées (tag `1.3.0`, 2026-09-26). Packaging Velopack
-prêt (code + outillage), **à livrer en v1.4.0** (bump `App.csproj` + tag via `/livraison`). Dépôt sur GitHub (`origin`).
+**Phase :** **Phase 6 — Évolution**. v1.0.0→v1.3.0 livrées (tags sans préfixe `v`, ex. `1.3.0`). **v1.4.0 préparée**
+(packaging Velopack : `App.csproj` 1.4.0 + CHANGELOG + README) sur la branche `axe-12-packaging-velopack` —
+**reste à merger sur `main` + créer/pousser le tag `1.4.0`** (déclenche la CI de release). Dépôt sur GitHub (`origin`).
 Pas d'Axe planifié au-delà (plan-axes = Axes 1→7 ; Axes 8-11 + packaging = évolutions cadrées hors plan).
 **Post-v1.0.0 (hors Axe, mergé sur `main`) :** application renommée **« Dofus Optimizer »** ;
 polish UI onglet Comptes, onglets pleine largeur, icône poubelle Raccourcis.

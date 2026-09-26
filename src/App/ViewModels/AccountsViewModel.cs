@@ -25,6 +25,7 @@ public sealed class AccountsViewModel : ObservableObject
     private readonly Dictionary<string, DetectedWindow> _detected = new(StringComparer.Ordinal);
     private readonly ISessionProcessService? _session;
     private readonly Action? _requestShutdown;
+    private readonly Action? _onSessionOpened;
     private readonly Action<string, Binding?>? _applyAccountDirectBinding;
     private List<AccountConfig> _persisted;
     private List<GameAccount> _gameAccounts;
@@ -47,12 +48,14 @@ public sealed class AccountsViewModel : ObservableObject
         IReadOnlyList<GameAccount>? gameAccounts = null,
         ISessionProcessService? session = null,
         Action? requestShutdown = null,
-        Action<string, Binding?>? applyAccountDirectBinding = null)
+        Action<string, Binding?>? applyAccountDirectBinding = null,
+        Action? onSessionOpened = null)
     {
         _persisted = [.. persisted];
         _gameAccounts = [.. gameAccounts ?? []];
         _session = session;
         _requestShutdown = requestShutdown;
+        _onSessionOpened = onSessionOpened;
         _applyAccountDirectBinding = applyAccountDirectBinding;
         MoveUpCommand = new RelayCommand(() => MoveSelected(-1), () => CanMoveSelected(-1));
         MoveDownCommand = new RelayCommand(() => MoveSelected(+1), () => CanMoveSelected(+1));
@@ -89,7 +92,7 @@ public sealed class AccountsViewModel : ObservableObject
     /// rotation. Pilotent les emplacements d'activation directe « sans compte » de l'onglet Raccourcis.
     /// </summary>
     public IReadOnlyList<string> ConnectedUnlinkedCharacters() =>
-        ConnectedRows.Where(r => !r.IsLinked).Select(r => r.Character.CharacterName).ToList();
+        ConnectedRows.Where(r => !r.IsLinked && !r.IsAnonymous).Select(r => r.Character.CharacterName).ToList();
 
     /// <summary>Comptes affichés, ordonnés (ordre persistant puis détectés non persistés en fin).</summary>
     public ObservableCollection<AccountItemViewModel> Items { get; } = [];
@@ -106,7 +109,11 @@ public sealed class AccountsViewModel : ObservableObject
     /// <summary>Zone du bas non vide (au moins un compte déconnecté à personnages liés).</summary>
     public bool HasDisconnected => DisconnectedAccounts.Count > 0;
 
-    /// <summary>Vrai si au moins un client DOFUS est actuellement connecté (Axe 9) — pilote « Terminer session ».</summary>
+    /// <summary>
+    /// Vrai si au moins un client DOFUS est actuellement connecté (Axe 9) — pilote « Terminer session », les
+    /// croix, et le masquage de « Ouvrir une session » (Axe 11). Inclut les clients <b>sans personnage</b> :
+    /// une fenêtre DOFUS ouverte, même à l'écran de sélection, suffit à considérer une session en cours.
+    /// </summary>
     public bool HasConnectedClients
     {
         get => _hasConnectedClients;
@@ -334,6 +341,8 @@ public sealed class AccountsViewModel : ObservableObject
         var rebuilt = new List<AccountConfig>(Items.Count);
         foreach (var item in Items)
         {
+            // Clients sans personnage (Axe 11) : purement runtime, jamais matérialisés en config ([DT-030]).
+            if (!item.HasCharacter) continue;
             existingByName.TryGetValue(item.CharacterName, out var existing);
             rebuilt.Add(new AccountConfig(item.CharacterName, item.IsExcluded, existing?.DirectBinding, existing?.AccountName));
         }
@@ -392,22 +401,29 @@ public sealed class AccountsViewModel : ObservableObject
     private void RebuildZones()
     {
         var states = Items
-            .Select(i => new AccountRuntimeState(i.CharacterName, i.IsConnected, i.IsExcluded, i.Handle, i.AccountName))
+            .Select(i => new AccountRuntimeState(i.CharacterName, i.IsConnected, i.IsExcluded, i.Handle, i.AccountName, i.HasCharacter))
             .ToList();
-        var zones = AccountZones.Build(_gameAccounts, states);
+        // Les clients sans personnage (Axe 11) ne participent pas à la logique de comptes/zones (ni lien, ni
+        // disponibilité) : seuls les personnages réels sont partitionnés.
+        var characterStates = states.Where(s => s.HasCharacter).ToList();
+        var zones = AccountZones.Build(_gameAccounts, characterStates);
 
         // Comptes disponibles : mis à jour en place (référence partagée par les lignes de zone 2).
         AvailableAccounts.Clear();
         foreach (var name in zones.AvailableAccounts) AvailableAccounts.Add(name);
 
         // Liste unifiée « connectés » (Axe 10) ordonnée par l'ordre de rotation (ordre de Items) : lignes
-        // liées (compte + perso) et non liées (perso + liaison) mêlées, chacune de plein droit ([DT-029]).
+        // liées (compte + perso), non liées (perso + liaison) et anonymes (client sans perso « Dofus N »,
+        // Axe 11) mêlées, chacune de plein droit dans la rotation ([DT-029]/[DT-030]).
         var accountByChar = zones.Connected.ToDictionary(z => z.ConnectedCharacter, z => z.AccountName, StringComparer.Ordinal);
         var unlinked = new HashSet<string>(zones.UnlinkedConnected, StringComparer.Ordinal);
         ConnectedRows.Clear();
+        var anonymousNumber = 0;
         foreach (var item in Items)
         {
-            if (accountByChar.TryGetValue(item.CharacterName, out var accountName))
+            if (!item.HasCharacter)
+                ConnectedRows.Add(new ConnectedRowViewModel(item, $"Dofus {++anonymousNumber}"));
+            else if (accountByChar.TryGetValue(item.CharacterName, out var accountName))
                 ConnectedRows.Add(new ConnectedRowViewModel(accountName, item));
             else if (unlinked.Contains(item.CharacterName))
                 ConnectedRows.Add(new ConnectedRowViewModel(item, AvailableAccounts, LinkCharacter));
@@ -433,9 +449,10 @@ public sealed class AccountsViewModel : ObservableObject
     private void RefreshSessionState()
     {
         HasConnectedClients = Items.Any(i => i.IsConnected);
-        var launcherRunning = !HasConnectedClients && _session is not null && _session.IsLauncherRunning();
-        // Masqué si aucun client, launcher déjà ouvert, OU aucun chemin de launcher utilisable (RG évolution).
-        ShowOpenSession = _session is not null && !HasConnectedClients && !launcherRunning && LauncherPath() is not null;
+        // Axe 11 : « Ouvrir une session » proposé tant qu'AUCUNE fenêtre DOFUS n'est ouverte (client connecté
+        // OU client sans personnage à l'écran de sélection) et qu'un chemin de launcher est utilisable — même si
+        // le launcher tourne déjà sans client (dans ce cas l'action ramène sa fenêtre au premier plan).
+        ShowOpenSession = _session is not null && !HasConnectedClients && LauncherPath() is not null;
     }
 
     /// <summary>
@@ -466,10 +483,21 @@ public sealed class AccountsViewModel : ObservableObject
 
     private void OpenSession()
     {
-        var path = LauncherPath();
-        if (_session is null || path is null || !_session.LaunchLauncher(path)) return;
-        // Le launcher vient de démarrer : masquer le bouton sans attendre le prochain événement fenêtre.
-        ShowOpenSession = false;
+        if (_session is null) return;
+
+        if (_session.IsLauncherRunning())
+        {
+            // Launcher déjà ouvert (Axe 11) : ne pas en relancer un — ramener sa fenêtre au premier plan.
+            _session.TryActivateLauncher();
+        }
+        else
+        {
+            var path = LauncherPath();
+            if (path is null || !_session.LaunchLauncher(path)) return;
+        }
+
+        // Action « ouvrir une session » réussie : minimiser l'app si l'option est active (décidé côté MainViewModel).
+        _onSessionOpened?.Invoke();
     }
 
     private void CloseClient(AccountItemViewModel? item)

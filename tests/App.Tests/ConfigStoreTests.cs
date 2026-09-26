@@ -118,6 +118,28 @@ public sealed class ConfigStoreTests : IDisposable
     }
 
     [Fact]
+    public void SaveReload_PreserveMinimizeOnOpenSession()
+    {
+        // Champ additif Axe 11 (init hors constructeur positionnel, défaut false) : round-trip source-gen, sans
+        // bump de schéma. Une config sans le champ retombe sur false (défaut naturel).
+        var store = new JsonConfigStore(_path);
+        store.Save(AppConfig.Default with { MinimizeOnOpenSession = true });
+        var json = File.ReadAllText(_path);
+        var reloaded = new JsonConfigStore(_path).Load();
+
+        Assert.Contains("\"minimizeOnOpenSession\"", json);
+        Assert.True(reloaded.MinimizeOnOpenSession);
+    }
+
+    [Fact]
+    public void Load_ConfigSansMinimizeOnOpenSession_RetourneFaux()
+    {
+        File.WriteAllText(_path, "{ \"schemaVersion\": 3, \"accounts\": [], \"gameAccounts\": [] }");
+
+        Assert.False(new JsonConfigStore(_path).Load().MinimizeOnOpenSession);
+    }
+
+    [Fact]
     public void Save_EcritDuJsonLisibleCamelCaseAvecEnumsEnChaines()
     {
         var store = new JsonConfigStore(_path);

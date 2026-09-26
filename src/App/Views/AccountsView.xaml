@@ -268,14 +268,14 @@
                     </Grid.ColumnDefinitions>
                     <!-- Fond transparent + padding : agrandit la zone de préhension du glisser-déposer
                          (les événements souris ne se déclenchent que sur une surface non nulle). -->
-                    <TextBlock Grid.Column="0" Text="&#9776;" Margin="0,0,4,0" Padding="8,10" VerticalAlignment="Center"
+                    <TextBlock x:Name="DragHandle" Grid.Column="0" Text="&#9776;" Margin="0,0,4,0" Padding="8,10" VerticalAlignment="Center"
                                FontSize="15" Background="Transparent"
                                Cursor="SizeAll" ToolTip="Glisser pour réordonner la rotation"
                                Foreground="{StaticResource TextSecondaryBrush}"
                                PreviewMouseLeftButtonDown="Handle_PreviewMouseLeftButtonDown"
                                PreviewMouseMove="Handle_PreviewMouseMove" />
                     <StackPanel Grid.Column="1" x:Name="Texts" VerticalAlignment="Center">
-                        <TextBlock x:Name="CharName" Text="{Binding Character.CharacterName}" FontSize="13" FontWeight="SemiBold"
+                        <TextBlock x:Name="CharName" Text="{Binding Title}" FontSize="13" FontWeight="SemiBold"
                                    Foreground="{StaticResource TextPrimaryBrush}" />
                         <!-- Sous-titre = nom du compte : visible seulement pour une ligne liée. -->
                         <TextBlock x:Name="AccountSubtitle" Text="{Binding AccountName}" FontSize="11"
@@ -290,7 +290,7 @@
                     <Button x:Name="LinkBtn" Grid.Column="3" Style="{StaticResource ActionButtonStyle}"
                             Content="Lier" Visibility="Collapsed" Command="{Binding LinkCommand}" />
                     <!-- Léger séparateur vertical entre la zone liaison et les actions (+/X). -->
-                    <Border Grid.Column="4" Width="1" Margin="8,3" VerticalAlignment="Stretch"
+                    <Border x:Name="Separator" Grid.Column="4" Width="1" Margin="8,3" VerticalAlignment="Stretch"
                             Background="{StaticResource SurfaceAltBrush}" />
                     <Button x:Name="ExcludeBtn" Grid.Column="5" Style="{StaticResource EyeButtonStyle}"
                             ToolTip="Exclure de la rotation"
@@ -322,6 +322,16 @@
                 <!-- « Lier » visible seulement quand un compte est sélectionné (Axe 10) — implique non liée. -->
                 <DataTrigger Binding="{Binding CanLink}" Value="True">
                     <Setter TargetName="LinkBtn" Property="Visibility" Value="Visible" />
+                </DataTrigger>
+                <!-- Client sans personnage (Axe 11) : rendu réduit — libellé « Dofus N » + croix seule. Pas de
+                     poignée (non réordonnable), ni œil (non excluable), ni combo/« Lier » (pas de compte), ni
+                     séparateur. Placé après les règles de liaison pour les neutraliser ([DT-030]). -->
+                <DataTrigger Binding="{Binding IsAnonymous}" Value="True">
+                    <Setter TargetName="DragHandle" Property="Visibility" Value="Collapsed" />
+                    <Setter TargetName="LinkCombo" Property="Visibility" Value="Collapsed" />
+                    <Setter TargetName="LinkBtn" Property="Visibility" Value="Collapsed" />
+                    <Setter TargetName="Separator" Property="Visibility" Value="Collapsed" />
+                    <Setter TargetName="ExcludeBtn" Property="Visibility" Value="Collapsed" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Character.IsExcluded}" Value="True">
                     <Setter TargetName="Texts" Property="Opacity" Value="0.5" />

@@ -68,6 +68,8 @@ public partial class AccountsView : UserControl
     {
         if (_dragged is null || DataContext is not AccountsViewModel vm) return;
         if (sender is not FrameworkElement row || row.DataContext is not ConnectedRowViewModel target) return;
+        // Les clients sans personnage (Axe 11) ne sont pas réordonnables (ordre non persisté) : ignorer.
+        if (target.IsAnonymous) return;
 
         e.Effects = DragDropEffects.Move;
         e.Handled = true;

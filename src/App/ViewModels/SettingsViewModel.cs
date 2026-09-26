@@ -24,6 +24,7 @@ public sealed class SettingsViewModel : ObservableObject
     private readonly Action<string?> _applyLauncherPath;
     private readonly Action<bool> _applyCloseMinimizes;
     private readonly Action<bool> _applyMinimizeToTray;
+    private readonly Action<bool> _applyMinimizeOnOpenSession;
     private readonly Action<AppConfig> _applyImported;
     private readonly Func<string, string?> _addAccount;
     private readonly Action<string> _deleteAccount;
@@ -36,6 +37,7 @@ public sealed class SettingsViewModel : ObservableObject
     private bool _startWithWindows;
     private bool _closeMinimizes;
     private bool _minimizeToTray;
+    private bool _minimizeOnOpenSession;
     private string? _statusMessage;
     private bool _isStatusError;
     private string _newAccountName = string.Empty;
@@ -53,6 +55,7 @@ public sealed class SettingsViewModel : ObservableObject
         Action<string?> applyLauncherPath,
         Action<bool> applyCloseMinimizes,
         Action<bool> applyMinimizeToTray,
+        Action<bool> applyMinimizeOnOpenSession,
         Action<AppConfig> applyImported,
         Func<string, string?> addAccount,
         Action<string> deleteAccount,
@@ -67,6 +70,7 @@ public sealed class SettingsViewModel : ObservableObject
         _applyLauncherPath = applyLauncherPath;
         _applyCloseMinimizes = applyCloseMinimizes;
         _applyMinimizeToTray = applyMinimizeToTray;
+        _applyMinimizeOnOpenSession = applyMinimizeOnOpenSession;
         _applyImported = applyImported;
         _addAccount = addAccount;
         _deleteAccount = deleteAccount;
@@ -80,6 +84,7 @@ public sealed class SettingsViewModel : ObservableObject
         _launcherPath = config.LauncherPath ?? string.Empty;
         _closeMinimizes = config.CloseMinimizes;
         _minimizeToTray = config.MinimizeToTray;
+        _minimizeOnOpenSession = config.MinimizeOnOpenSession;
 
         ExportCommand = new RelayCommand(Export);
         ImportCommand = new RelayCommand(Import);
@@ -130,6 +135,20 @@ public sealed class SettingsViewModel : ObservableObject
         set { if (SetProperty(ref _minimizeToTray, value)) _applyMinimizeToTray(value); }
     }
 
+    /// <summary>
+    /// Cycle de session (Axe 11) : cliquer « Ouvrir une session » réduit ensuite l'application. Persisté via le
+    /// <see cref="MainViewModel"/>. L'interrupteur n'est proposé que si un chemin de launcher est renseigné
+    /// (<see cref="HasLauncherPath"/>).
+    /// </summary>
+    public bool MinimizeOnOpenSession
+    {
+        get => _minimizeOnOpenSession;
+        set { if (SetProperty(ref _minimizeOnOpenSession, value)) _applyMinimizeOnOpenSession(value); }
+    }
+
+    /// <summary>Vrai si un chemin de launcher est renseigné : pilote la visibilité de « Réduire à l'ouverture d'une session ».</summary>
+    public bool HasLauncherPath => !string.IsNullOrWhiteSpace(_launcherPath);
+
     /// <summary>Visibilité de la ligne de création de compte (dépliée par le bouton « + », repliée en quittant l'onglet).</summary>
     public bool IsAddAccountVisible
     {
@@ -153,7 +172,12 @@ public sealed class SettingsViewModel : ObservableObject
     public string LauncherPath
     {
         get => _launcherPath;
-        set { if (SetProperty(ref _launcherPath, value)) _applyLauncherPath(value); }
+        set
+        {
+            if (!SetProperty(ref _launcherPath, value)) return;
+            _applyLauncherPath(value);
+            OnPropertyChanged(nameof(HasLauncherPath)); // (dé)masque « Réduire à l'ouverture d'une session »
+        }
     }
 
     /// <summary>Ouvre un sélecteur de fichier pour choisir l'exécutable du launcher.</summary>
@@ -291,9 +315,11 @@ public sealed class SettingsViewModel : ObservableObject
         SetProperty(ref _isInterceptionSuspended, config.InterceptionSuspended, nameof(IsInterceptionSuspended));
         if (SetProperty(ref _startWithWindows, config.StartWithWindows, nameof(StartWithWindows)))
             _startup.SetEnabled(config.StartWithWindows);
-        SetProperty(ref _launcherPath, config.LauncherPath ?? string.Empty, nameof(LauncherPath));
+        if (SetProperty(ref _launcherPath, config.LauncherPath ?? string.Empty, nameof(LauncherPath)))
+            OnPropertyChanged(nameof(HasLauncherPath));
         SetProperty(ref _closeMinimizes, config.CloseMinimizes, nameof(CloseMinimizes));
         SetProperty(ref _minimizeToTray, config.MinimizeToTray, nameof(MinimizeToTray));
+        SetProperty(ref _minimizeOnOpenSession, config.MinimizeOnOpenSession, nameof(MinimizeOnOpenSession));
         RebuildAccountRows();
     }
 

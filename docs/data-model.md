@@ -1,6 +1,6 @@
 # Modèle de données — Dofus Window Switcher
 
-**Dernière mise à jour :** 2026-09-24 — Axe 2 (schéma matérialisé en code, v1 inchangée)
+**Dernière mise à jour :** 2026-09-26 — Axe 11 (champ additif `minimizeOnOpenSession` ; clients sans personnage runtime-only)
 **Références architecture :** `docs/agent/archis/ARCHI-DOTNET-WPF.md §Persistance`
 
 > Le « modèle de données » de cet outil est le **schéma du fichier de
@@ -37,6 +37,7 @@ erDiagram
         string launcherPath "nullable — exe Ankama Launcher"
         bool   closeMinimizes "fermer [X] minimise l'app"
         bool   minimizeToTray "minimiser en barre d'état"
+        bool   minimizeOnOpenSession "réduire à l'ouverture d'une session"
         Binding nextBinding "nullable"
         Binding prevBinding "nullable"
         AccountConfig[] accounts "personnages, ordre = rotation"
@@ -91,6 +92,9 @@ partout où il apparaît.
   Absent d'une config < v3 ⇒ **forcé `true`** à la migration (préserve le comportement tray historique).
 - `minimizeToTray` (Axe 9, défaut `false`) : minimiser masque la fenêtre en **barre d'état** (zone de
   notification) plutôt qu'en barre des tâches. Les deux actifs ⇒ [X] minimise en barre d'état.
+- `minimizeOnOpenSession` (Axe 11, défaut `false`) : après « Ouvrir une session », l'app se **minimise**
+  (selon `minimizeToTray`). Champ **additif** (init hors constructeur positionnel) : absent ⇒ `false`,
+  **aucun bump de `schemaVersion`** ni migration (comme `launcherPath`).
 
 ### AccountConfig (personnage)
 
@@ -152,6 +156,10 @@ partout où il apparaît.
   initial = `1`.
 - **Runtime vs persisté** : l'état `connecté/absent` et le handle de fenêtre
   (`HWND`) sont **calculés au runtime**, jamais écrits dans le fichier.
+- **Clients sans personnage** (Axe 11) : un client DOFUS connecté sans personnage (écran de sélection
+  « Dofus <version> - Release ») est **purement runtime** — identité dérivée du handle, affiché « Dofus N »,
+  fermable et inclus dans la rotation, mais **jamais** dans `accounts` (pas de nom stable) : ni compte, ni
+  raccourci, ni exclusion/ordre persistés. Il n'existe donc pas dans ce modèle de données.
 
 ---
 
@@ -165,3 +173,4 @@ partout où il apparaît.
 | Axe 8 | 2026-09-24 | **schemaVersion 1 → 2**. Nouvelle entité `GameAccount` (compte) dans `appConfig.gameAccounts` ; lien nullable `accountConfig.accountName` (personnage→compte). Migration montante additive (v1 sans `gameAccounts` → liste vide, personnages non liés). Terminologie clarifiée : `AccountConfig` = personnage. |
 | Axe 9 | 2026-09-25 | **schemaVersion 2 → 3**. Cycle de session/vie : `appConfig.launcherPath` (nullable, chemin Ankama Launcher), `closeMinimizes` (défaut `true`), `minimizeToTray` (défaut `false`). Migration montante : configs < v3 → `closeMinimizes` forcé `true` (préserve le comportement tray). Aucune entité modifiée. |
 | Axe 10 | 2026-09-25 | **Aucun changement de schéma** (schemaVersion inchangée). Réactivation comportementale de `accountConfig.directBinding` pour les personnages **non liés** (activation directe portée par le personnage) ; transfert au compte au moment du lien ([DT-029]). Déjà couvert par l'unicité globale (`AllBindings`). |
+| Axe 11 | 2026-09-26 | **Aucun bump de `schemaVersion`** (reste 3). Champ additif `appConfig.minimizeOnOpenSession` (défaut `false`, source-gen, sans migration — comme `launcherPath`). Clients DOFUS **sans personnage** = participants **runtime-only** de la rotation (identité=handle, « Dofus N ») : jamais persistés, hors modèle ([DT-030]). |

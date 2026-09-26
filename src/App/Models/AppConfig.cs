@@ -53,6 +53,13 @@ public sealed record AppConfig(
     public bool MinimizeToTray { get; init; }
 
     /// <summary>
+    /// Cycle de session (Axe 11) : quand vrai, cliquer « Ouvrir une session » <b>minimise</b> ensuite Dofus
+    /// Optimizer (pour laisser la place au launcher). Propriété additive hors constructeur positionnel : absente
+    /// d'une config → défaut naturel <c>false</c> (schéma inchangé, pas de migration — comme <see cref="LauncherPath"/>).
+    /// </summary>
+    public bool MinimizeOnOpenSession { get; init; }
+
+    /// <summary>
     /// Version de schéma produite par cette version de l'app. v2 : comptes (v1 = personnages seuls).
     /// v3 : cycle de vie fenêtre (<see cref="CloseMinimizes"/>/<see cref="MinimizeToTray"/>).
     /// </summary>

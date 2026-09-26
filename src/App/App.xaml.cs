@@ -83,8 +83,11 @@ public partial class App : Application
             if (_window is not null) _window.ForceClose = true;
             Current.Shutdown();
         };
+        // Réduire l'app à l'ouverture d'une session (Axe 11) : la fenêtre est assignée plus bas ; le rappel est
+        // invoqué plus tard (après un clic « Ouvrir une session »), donc capturer _window en closure suffit.
+        Action requestMinimize = () => _window?.MinimizeApp();
         var mainViewModel = new MainViewModel(config, _windowDetector, inputCapture, startup, fileDialog,
-            session, requestShutdown);
+            session, requestShutdown, requestMinimize);
         mainViewModel.ConfigChanged += _autosave.Notify;
 
         // 4. Interception & bascule de focus (Axe 6) : décision pure → activation → coordinateur.

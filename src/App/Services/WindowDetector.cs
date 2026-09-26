@@ -161,12 +161,29 @@ public sealed unsafe class WindowDetector : IWindowDetector
 
         var title = GetWindowTitle(hwnd);
         var className = GetClassName(hwnd);
-        var name = DofusWindowRecognizer.IsDofusWindow(title, className)
-            ? DofusWindowRecognizer.ExtractCharacterName(title)
-            : null;
+
+        // Deux formes de client : en jeu (porteur d'un nom de personnage) ou connecté SANS personnage
+        // (écran de sélection « Dofus <version> - Release », Axe 11). Ce dernier reçoit une identité runtime
+        // synthétique par handle (sans collision avec un vrai nom) et n'est jamais persisté ([DT-030]).
+        string? name;
+        var hasCharacter = false;
+        if (DofusWindowRecognizer.IsDofusWindow(title, className))
+        {
+            name = DofusWindowRecognizer.ExtractCharacterName(title);
+            hasCharacter = true;
+        }
+        else if (DofusWindowRecognizer.IsAnonymousClient(title, className))
+        {
+            name = AnonymousKey(hwnd);
+        }
+        else
+        {
+            name = null;
+        }
 
         if (DetectionLog.IsEnabled)
-            DetectionLog.Write($"eval  hwnd=0x{hwnd:X} class='{className}' title='{title}' → {(name is null ? "REJETÉ" : $"DOFUS «{name}»")}");
+            DetectionLog.Write($"eval  hwnd=0x{hwnd:X} class='{className}' title='{title}' → " +
+                (name is null ? "REJETÉ" : hasCharacter ? $"DOFUS «{name}»" : "DOFUS (sans personnage)"));
 
         var wasKnown = _known.TryGetValue(hwnd, out var previousName);
 
@@ -180,16 +197,23 @@ public sealed unsafe class WindowDetector : IWindowDetector
         if (!wasKnown)
         {
             _known[hwnd] = name;
-            AccountAppeared?.Invoke(new DetectedWindow(name, hwnd));
+            AccountAppeared?.Invoke(new DetectedWindow(name, hwnd, hasCharacter));
         }
         else if (!string.Equals(previousName, name, StringComparison.Ordinal))
         {
-            // Renommage / changement de personnage sur le même handle : disparition puis apparition.
+            // Renommage / changement de personnage sur le même handle : disparition puis apparition. Couvre
+            // aussi la transition sélection↔jeu (client sans personnage ↔ personnage) sur un même handle.
             AccountDisappeared?.Invoke(new DetectedWindow(previousName!, hwnd));
             _known[hwnd] = name;
-            AccountAppeared?.Invoke(new DetectedWindow(name, hwnd));
+            AccountAppeared?.Invoke(new DetectedWindow(name, hwnd, hasCharacter));
         }
     }
+
+    /// <summary>
+    /// Clé synthétique d'identité runtime d'un client sans personnage (Axe 11), dérivée du handle : stable
+    /// tant que la fenêtre vit et sans collision avec un vrai nom de personnage (préfixe de caractère nul).
+    /// </summary>
+    private static string AnonymousKey(nint hwnd) => $"\0dofus:{hwnd}";
 
     private void Forget(nint hwnd, string name)
     {

@@ -25,6 +25,13 @@ public interface ISessionProcessService
     bool LaunchLauncher(string launcherPath);
 
     /// <summary>
+    /// Ramène la fenêtre de l'Ankama Launcher déjà ouvert au premier plan (Axe 11) — utilisé par « Ouvrir une
+    /// session » quand le launcher tourne déjà, pour l'afficher plutôt que d'en relancer un. Renvoie <c>false</c>
+    /// si aucun launcher avec fenêtre n'est trouvé. Ref exception C-02 [DT-027] (cycle de session, pas le jeu).
+    /// </summary>
+    bool TryActivateLauncher();
+
+    /// <summary>
     /// Force-kill le processus propriétaire de la fenêtre <paramref name="hWnd"/> (client connecté).
     /// Silencieux si le PID est nul ou le processus déjà terminé. Sans confirmation (cohérent RG-C04).
     /// </summary>

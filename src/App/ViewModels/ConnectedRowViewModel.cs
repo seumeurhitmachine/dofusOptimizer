@@ -36,11 +36,34 @@ public sealed class ConnectedRowViewModel : ObservableObject
         LinkCommand = new RelayCommand(DoLink, () => CanLink);
     }
 
+    /// <summary>
+    /// Ligne <b>anonyme</b> (Axe 11) : client DOFUS connecté <b>sans personnage</b> (écran de sélection). Aucune
+    /// affordance de personnage — ni glisser, ni exclusion, ni compte, ni raccourci : uniquement un libellé
+    /// « Dofus N » (<paramref name="displayName"/>) et la fermeture (croix). Toujours dans la rotation ([DT-030]).
+    /// </summary>
+    public ConnectedRowViewModel(AccountItemViewModel character, string displayName)
+    {
+        Character = character;
+        IsAnonymous = true;
+        DisplayName = displayName;
+        AvailableAccounts = [];
+        LinkCommand = new RelayCommand(DoLink, () => CanLink);
+    }
+
     /// <summary>Personnage connecté (nom, exclusion, glisser, fermeture) — instance partagée avec <c>Items</c>.</summary>
     public AccountItemViewModel Character { get; }
 
     /// <summary>Nom du compte lié (sous-titre), ou <c>null</c> si la ligne n'est pas rattachée à un compte.</summary>
     public string? AccountName { get; }
+
+    /// <summary>Vrai pour un client connecté <b>sans personnage</b> (Axe 11) : rendu réduit (libellé + croix).</summary>
+    public bool IsAnonymous { get; }
+
+    /// <summary>Libellé affiché : « Dofus N » pour une ligne anonyme, sinon le nom du personnage.</summary>
+    public string Title => IsAnonymous ? DisplayName! : Character.CharacterName;
+
+    /// <summary>Libellé « Dofus N » d'une ligne anonyme (positionnel), sinon <c>null</c>.</summary>
+    public string? DisplayName { get; }
 
     /// <summary>Vrai si la ligne est rattachée à un compte : pilote le rendu (sous-titre compte vs liaison).</summary>
     public bool IsLinked => AccountName is not null;

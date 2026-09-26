@@ -46,11 +46,13 @@ public static class AccountMerge
             placed.Add(account.CharacterName);
         }
 
-        // 2. Fenêtres détectées non encore persistées : ajoutées en fin, connectées (US-D01).
+        // 2. Fenêtres détectées non encore persistées : ajoutées en fin, connectées (US-D01). Les clients
+        //    SANS personnage (Axe 11) passent toujours par ici (jamais persistés) et portent HasCharacter=false.
         foreach (var window in detected)
         {
             if (!placed.Add(window.CharacterName)) continue; // déjà persistée ou doublon
-            result.Add(new AccountRuntimeState(window.CharacterName, IsConnected: true, IsExcluded: false, window.Handle));
+            result.Add(new AccountRuntimeState(window.CharacterName, IsConnected: true, IsExcluded: false,
+                window.Handle, AccountName: null, HasCharacter: window.HasCharacter));
         }
 
         return result;

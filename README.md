@@ -10,12 +10,12 @@ et optimise ton exppérience de jeu.
 
 ## Fonctionnalités
 
-![Onglet Comptes](assets/screenshot_account_1.4.png)
+<img src="assets/screenshot_account_1.4.png" width="310" alt="Onglet Comptes">
 - Détection des clients Dofus ouverts et des personnages connectés en temps réel
 - Drag & drop pour organiser de l'ordre des comptes 
 - Enregistre manuellement les personnages par compte pour conserver tes raccourcis
 
-![Onglet Raccourcis](assets/screenshot_shortcut_1.4.png)
+<img src="assets/screenshot_shortcut_1.4.png" width="310" alt="Onglet Raccourcis">
 2 types de raccourcis :
 - Raccourcis de rotation pour accéder au prochain compte dans l'ordre déterminé
 - Raccourcis directs pour accéder au compte voulu
@@ -63,8 +63,3 @@ A savoir que l'application n'interagit jamais avec le processus du jeu : elle s'
 exclusivement sur la gestion native des fenêtres Windows.
 
 Propriété de Mathias GROSZ - Usage privé.
-
-
-| Comptes | Raccourcis |
-| :---: | :---: |
-|  |  |

@@ -1,57 +1,43 @@
 # Dofus Optimizer
 
-Bascule rapide entre plusieurs clients DOFUS, pilotée au clavier et à la souris.
-L'application n'interagit jamais avec le processus du jeu : elle s'appuie
-exclusivement sur les API fenêtres Windows (`user32`).
+Application 100% vivbecodée de bascule rapide entre plusieurs clients Dofus 
+pour faciliter le multi-compte.
+Finis les ALT+TAB, pilote tes clients Dofus avec des raccourcis personnalisés 
+et optimise ton exppérience de jeu.
 
 **Version courante : 1.4.0** — 2026-09-26
 
+
 ## Fonctionnalités
 
-- Détection temps réel des clients DOFUS ouverts, y compris ceux **sans personnage
-  connecté** (écran de sélection, affichés « Dofus 1, 2, 3… ») — fermables et inclus
-  dans la rotation.
-- Distinction **Compte** / **personnage** : liaison manuelle personnage → compte
-  depuis l'onglet Comptes, gestion des comptes dans les Réglages.
-- Onglet Comptes en **une liste unique des connectés** (liés ou non), l'ordre de la
-  liste étant l'ordre de rotation.
-- Rotation cyclique *suivant*/*précédent* entre les personnages connectés, avec saut
-  des personnages absents ou exclus.
-- Activation directe par un raccourci dédié, aussi bien pour un compte que pour un
-  personnage sans compte.
-- Raccourcis personnalisables (touche clavier ou bouton souris, boutons
-  auxiliaires inclus).
-- Interception conditionnée au focus d'un client DOFUS (aucun effet ailleurs).
-- Réordonnancement et exclusion des comptes.
-- **Ouverture/fermeture des clients** : lancer l'Ankama Launcher, fermer un client
-  ou terminer la session, sans jamais interagir avec le jeu lui-même.
-- **Comportements de fenêtre** configurables (fermer minimise, minimiser dans la
-  barre d'état) et **instance unique** (relancer réveille la fenêtre existante).
-- Icône de zone de notification (tray) : suspendre/réactiver, ouvrir, quitter.
-- Suspension globale, démarrage avec Windows (optionnel), export/import de la
-  configuration.
-- **Installateur** et **mises à jour automatiques** (silencieuses, appliquées à la
-  fermeture de l'application).
+![Onglet Comptes](assets/screenshot_account_1.4.png)
+- Détection des clients Dofus ouverts et des personnages connectés en temps réel
+- Drag & drop pour organiser de l'ordre des comptes 
+- Enregistre manuellement les personnages par compte pour conserver tes raccourcis
+
+![Onglet Raccourcis](assets/screenshot_shortcut_1.4.png)
+2 types de raccourcis :
+- Raccourcis de rotation pour accéder au prochain compte dans l'ordre déterminé
+- Raccourcis directs pour accéder au compte voulu
 
 ## Installation
 
 1. Télécharger `Setup.exe` depuis la [dernière release](https://github.com/seumeurhitmachine/dofusOptimizer/releases).
-2. Lancer `Setup.exe`. L'application s'installe et se met **à jour automatiquement** ensuite.
+2. Lancer `Setup.exe`. L'application s'installe et se mettra **à jour automatiquement** à la sortie d'une nouvelle version.
 
-> **Avertissement Windows au premier lancement.** L'application n'est pas signée par
-> un certificat payant : Windows SmartScreen peut afficher « Windows a protégé votre
-> ordinateur ». C'est normal pour un logiciel gratuit non signé. Cliquer sur
-> **« Informations complémentaires »** puis **« Exécuter quand même »**. Cette étape
-> n'apparaît qu'à la première installation ; les mises à jour suivantes sont silencieuses.
+> **Avertissement Windows au premier lancement.** L'application n'est pas signée :
+> Windows SmartScreen peut afficher « Windows a protégé votre ordinateur ». Cliquer sur
+> **« Informations complémentaires »** puis **« Exécuter quand même »**. 
 
 ## Prérequis
 
 - Windows 10/11 (x64).
-- [.NET SDK 10](https://dotnet.microsoft.com/) pour construire depuis les sources.
 
-## Construire et lancer
+## Pour modifier l'application
 
 ```powershell
+Vérifie l'installation de [.NET SDK 10](https://dotnet.microsoft.com/)
+
 # Lancer en développement
 dotnet run --project src/App/App.csproj
 
@@ -68,6 +54,17 @@ dotnet publish src/App -c Release -r win-x64
 La configuration est stockée dans
 `%APPDATA%\DofusSwitcher\config.json`.
 
-## Licence
+## Disclaimer & Licence
 
-Usage privé.
+Ankama n'approuve jamais aucune application tierce pour Dofus et les risques liés à son
+utilisation n'engage pas la responsabilité des développeurs.
+
+A savoir que l'application n'interagit jamais avec le processus du jeu : elle s'appuie
+exclusivement sur la gestion native des fenêtres Windows.
+
+Propriété de Mathias GROSZ - Usage privé.
+
+
+| Comptes | Raccourcis |
+| :---: | :---: |
+|  |  |

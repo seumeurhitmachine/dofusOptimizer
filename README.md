@@ -10,15 +10,21 @@ et optimise ton exppérience de jeu.
 
 ## Fonctionnalités
 
-<img src="assets/screenshot_account_1.4.png" width="310" alt="Onglet Comptes">
-- Détection des clients Dofus ouverts et des personnages connectés en temps réel
-- Drag & drop pour organiser de l'ordre des comptes 
-- Enregistre manuellement les personnages par compte pour conserver tes raccourcis
+<p align="center">
+  <img src="assets/screenshot_account_1.4.png" width="310" alt="Onglet Comptes">
+</p>
 
-<img src="assets/screenshot_shortcut_1.4.png" width="310" alt="Onglet Raccourcis">
-2 types de raccourcis :
-- Raccourcis de rotation pour accéder au prochain compte dans l'ordre déterminé
-- Raccourcis directs pour accéder au compte voulu
+Détection des clients Dofus ouverts et des personnages connectés en temps réel<br>
+Drag & drop pour organiser de l'ordre des comptes<br>
+Enregistre manuellement les personnages par compte pour conserver tes raccourcis
+
+<p align="center">
+  <img src="assets/screenshot_shortcut_1.4.png" width="310" alt="Onglet Raccourcis">
+</p>
+
+2 types de raccourcis :<br>
+Raccourcis de rotation pour accéder au prochain compte dans l'ordre déterminé<br>
+Raccourcis directs pour accéder au compte voulu
 
 ## Installation
 

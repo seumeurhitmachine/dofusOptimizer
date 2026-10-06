@@ -5,7 +5,7 @@ pour faciliter le multi-compte.
 Finis les ALT+TAB, pilote tes clients Dofus avec des raccourcis personnalisés 
 et optimise ton exppérience de jeu.
 
-**Version courante : 1.4.0** — 2026-09-26
+**Version courante : 1.4.1** — 2026-10-06
 
 
 ## Fonctionnalités

@@ -199,6 +199,17 @@ internal static unsafe partial class NativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static partial bool IsIconic(nint hWnd);
 
+    /// <summary>
+    /// Vrai si la fenêtre a cessé de répondre (son thread ne pompe plus ses messages dans le délai système,
+    /// état « Ne répond pas »). [WARN] Garde-fou vital avant <see cref="AttachThreadInput"/> : attacher notre
+    /// file d'entrée au thread d'une fenêtre figée gèle notre thread UI de façon <b>permanente</b> (Windows
+    /// finit par fermer l'app) — le verrou de premier plan ne protège pas ce cas. Simple requête d'état de
+    /// fenêtre : non synthétique (C-03), aucun handle de processus (C-02).
+    /// </summary>
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static partial bool IsHungAppWindow(nint hWnd);
+
     /// <summary>Change l'état d'affichage d'une fenêtre (<see cref="SW_RESTORE"/> pour dé-réduire).</summary>
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]

@@ -31,9 +31,15 @@ public sealed class WindowActivator : IWindowActivator
 
         // Attacher la file d'entrée du thread courant à celle du premier plan : leur état d'entrée partagé
         // autorise SetForegroundWindow à activer réellement la cible (contourne le verrou, sans synthétique).
+        // [WARN] JAMAIS sur une fenêtre de premier plan figée : AttachThreadInput sérialiserait notre thread UI
+        // avec un thread qui ne pompe plus ses messages → gel PERMANENT (Windows ferme l'app « Ne répond pas »).
+        // On saute alors l'attache ; SetForegroundWindow seul est borné par le timeout de premier plan (safe),
+        // au prix d'un vol de focus possiblement raté (clignotement) — compromis assumé vs crash.
         var currentThread = NativeMethods.GetCurrentThreadId();
         var foregroundThread = NativeMethods.GetWindowThreadProcessId(foreground, 0);
-        var attached = foregroundThread != 0
+        var foregroundHung = foreground != 0 && NativeMethods.IsHungAppWindow(foreground);
+        var attached = !foregroundHung
+            && foregroundThread != 0
             && foregroundThread != currentThread
             && NativeMethods.AttachThreadInput(currentThread, foregroundThread, true);
         try

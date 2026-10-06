@@ -5,6 +5,18 @@ Toutes les évolutions notables de Dofus Optimizer sont consignées dans ce fich
 Le format s'appuie sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
+## [1.4.1] - 2026-10-06
+
+Correctif de stabilité.
+
+### Fixed
+
+- **Plus de blocage « Ne répond pas » lors d'une bascule** : lorsqu'un client DOFUS
+  figé se trouvait au premier plan, le changement de fenêtre pouvait geler
+  l'application de façon permanente jusqu'à ce que Windows la ferme de force.
+  L'activation détecte désormais une fenêtre qui ne répond plus et évite de s'y
+  attacher.
+
 ## [1.4.0] - 2026-09-26
 
 Installation simplifiée et **mises à jour automatiques** : Dofus Optimizer se

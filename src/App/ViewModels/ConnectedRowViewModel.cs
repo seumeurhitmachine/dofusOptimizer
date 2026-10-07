@@ -15,13 +15,25 @@ public sealed class ConnectedRowViewModel : ObservableObject
     private readonly Action<string, string>? _link;
     private string? _selectedAccount;
 
-    /// <summary>Ligne <b>liée</b> : nom du compte + personnage connecté (pas d'affordance de liaison).</summary>
-    public ConnectedRowViewModel(string accountName, AccountItemViewModel character)
+    /// <summary>
+    /// Ligne <b>liée</b> : nom du compte + personnage connecté (pas d'affordance de liaison). Le drapeau
+    /// <paramref name="isChef"/> marque le personnage du compte chef (Axe 13) ; <paramref name="copyInvite"/>
+    /// alimente la commande de copie des <c>/invite</c> (affichée seulement si au moins un autre perso est connecté).
+    /// </summary>
+    public ConnectedRowViewModel(
+        string accountName,
+        AccountItemViewModel character,
+        bool isChef = false,
+        bool canInvite = false,
+        Action? copyInvite = null)
     {
         AccountName = accountName;
         Character = character;
+        IsChef = isChef;
+        CanInvite = canInvite;
         AvailableAccounts = [];
         LinkCommand = new RelayCommand(DoLink, () => CanLink);
+        CopyInviteCommand = new RelayCommand(() => copyInvite?.Invoke());
     }
 
     /// <summary>Ligne <b>non liée</b> : personnage connecté sans compte + liaison à un compte disponible.</summary>
@@ -34,6 +46,7 @@ public sealed class ConnectedRowViewModel : ObservableObject
         AvailableAccounts = availableAccounts;
         _link = link;
         LinkCommand = new RelayCommand(DoLink, () => CanLink);
+        CopyInviteCommand = new RelayCommand(() => { });
     }
 
     /// <summary>
@@ -48,6 +61,7 @@ public sealed class ConnectedRowViewModel : ObservableObject
         DisplayName = displayName;
         AvailableAccounts = [];
         LinkCommand = new RelayCommand(DoLink, () => CanLink);
+        CopyInviteCommand = new RelayCommand(() => { });
     }
 
     /// <summary>Personnage connecté (nom, exclusion, glisser, fermeture) — instance partagée avec <c>Items</c>.</summary>
@@ -91,6 +105,24 @@ public sealed class ConnectedRowViewModel : ObservableObject
 
     /// <summary>Rattache le personnage au compte choisi. Désactivée/masquée tant qu'aucun compte n'est sélectionné.</summary>
     public RelayCommand LinkCommand { get; }
+
+    /// <summary>
+    /// Vrai si ce personnage est celui du compte <b>chef</b> actuellement connecté (Axe 13). Pilote l'affichage
+    /// de la couronne à droite du nom. Faux pour une ligne non liée ou anonyme.
+    /// </summary>
+    public bool IsChef { get; }
+
+    /// <summary>Vrai s'il existe au moins un autre personnage connecté (non anonyme) à inviter depuis cette ligne chef.</summary>
+    public bool CanInvite { get; }
+
+    /// <summary>
+    /// Affiche le bouton de copie des <c>/invite</c> : uniquement sur la ligne du chef (Axe 13) <b>et</b> s'il y a
+    /// au moins un autre personnage connecté à inviter (sinon la formule serait vide → bouton masqué).
+    /// </summary>
+    public bool ShowInvite => IsChef && CanInvite;
+
+    /// <summary>Copie dans le presse-papier la formule <c>/invite …</c> des autres personnages connectés (ligne chef, Axe 13).</summary>
+    public RelayCommand CopyInviteCommand { get; }
 
     private void DoLink()
     {

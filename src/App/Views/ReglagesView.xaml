@@ -127,6 +127,9 @@
         <!-- Icône poubelle en vecteur (couvercle + poignée + corps). -->
         <Geometry x:Key="TrashGeometry">M2,4 L14,4 M6,4 L6,2 L10,2 L10,4 M3.5,4 L4.5,14 L11.5,14 L12.5,4 M6.5,6.5 L6.5,12 M9.5,6.5 L9.5,12</Geometry>
 
+        <!-- Icône couronne (chef, Axe 13) : base + 3 pointes. Remplie en accent si chef, contour sinon. -->
+        <Geometry x:Key="CrownGeometry">M1,12 L1,5 L5,8 L8,3 L11,8 L15,5 L15,12 Z</Geometry>
+
         <!-- En-tête de compte cliquable (flèche + nom) qui déplie la liste des personnages liés. -->
         <Style x:Key="ExpandHeaderButtonStyle" TargetType="Button">
             <Setter Property="Cursor" Value="Hand" />
@@ -222,11 +225,23 @@
                         <StackPanel Margin="0,0,0,4">
                             <Grid>
                                 <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <!-- Flèche + nom : clic → déplie la liste des personnages liés. -->
+                                <!-- Couronne cliquable (chef, Axe 13) : à gauche du nom. Accent si chef, atténuée sinon. -->
                                 <Button Grid.Column="0"
+                                        Style="{StaticResource IconButtonStyle}"
+                                        Margin="0,0,2,0"
+                                        ToolTip="Désigner comme compte chef"
+                                        Command="{Binding ToggleChefCommand}">
+                                    <Path x:Name="Crown" Data="{StaticResource CrownGeometry}"
+                                          Width="15" Height="13" Stretch="Uniform"
+                                          Fill="{x:Null}" Stroke="{StaticResource TextSecondaryBrush}"
+                                          StrokeThickness="1.3" StrokeLineJoin="Round" />
+                                </Button>
+                                <!-- Flèche + nom : clic → déplie la liste des personnages liés. -->
+                                <Button Grid.Column="1"
                                         Style="{StaticResource ExpandHeaderButtonStyle}"
                                         Command="{Binding ToggleExpandCommand}">
                                     <StackPanel Orientation="Horizontal">
@@ -239,7 +254,7 @@
                                                    Foreground="{StaticResource TextPrimaryBrush}" />
                                     </StackPanel>
                                 </Button>
-                                <Button Grid.Column="1"
+                                <Button Grid.Column="2"
                                         Style="{StaticResource IconButtonStyle}"
                                         ToolTip="Supprimer le compte et ses personnages liés"
                                         Command="{Binding DeleteCommand}">
@@ -281,6 +296,11 @@
                         <DataTemplate.Triggers>
                             <DataTrigger Binding="{Binding IsExpanded}" Value="True">
                                 <Setter TargetName="Arrow" Property="Text" Value="&#9660;" />
+                            </DataTrigger>
+                            <!-- Compte chef (Axe 13) : couronne remplie en accent. -->
+                            <DataTrigger Binding="{Binding IsChef}" Value="True">
+                                <Setter TargetName="Crown" Property="Fill" Value="{StaticResource PrimaryBrush}" />
+                                <Setter TargetName="Crown" Property="Stroke" Value="{StaticResource PrimaryBrush}" />
                             </DataTrigger>
                         </DataTemplate.Triggers>
                     </DataTemplate>

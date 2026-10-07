@@ -38,6 +38,7 @@ erDiagram
         bool   closeMinimizes "fermer [X] minimise l'app"
         bool   minimizeToTray "minimiser en barre d'état"
         bool   minimizeOnOpenSession "réduire à l'ouverture d'une session"
+        string chefAccountName "nullable — compte chef (un seul)"
         Binding nextBinding "nullable"
         Binding prevBinding "nullable"
         AccountConfig[] accounts "personnages, ordre = rotation"
@@ -95,6 +96,10 @@ partout où il apparaît.
 - `minimizeOnOpenSession` (Axe 11, défaut `false`) : après « Ouvrir une session », l'app se **minimise**
   (selon `minimizeToTray`). Champ **additif** (init hors constructeur positionnel) : absent ⇒ `false`,
   **aucun bump de `schemaVersion`** ni migration (comme `launcherPath`).
+- `chefAccountName` (Axe 13, défaut `null`) : nom du `GameAccount` désigné **chef**. **Un seul chef** —
+  l'unicité est portée par ce champ unique (pas de drapeau par compte). Champ **additif** (init hors
+  constructeur positionnel) : absent ⇒ `null`, **aucun bump de `schemaVersion`** ni migration (comme
+  `launcherPath`). Référence devenue pendante (compte supprimé) ⇒ **effacée** par le writer.
 
 ### AccountConfig (personnage)
 
@@ -124,6 +129,9 @@ partout où il apparaît.
 - **Aucun** état runtime : « compte connecté » = a un personnage lié actuellement détecté.
 - Supprimer un compte **supprime** les personnages liés (leurs `AccountConfig`), sans
   confirmation (RG-C04) ; un personnage lié encore connecté réapparaît non lié (runtime).
+- **Chef** (Axe 13) : un compte peut être désigné chef via `AppConfig.chefAccountName` (un seul à la fois).
+  Couronne cliquable (Réglages) ; couronne indicateur à droite du personnage connecté du chef (Comptes) +
+  bouton de copie `/invite <autres persos connectés>` (affiché seulement s'il reste au moins un autre connecté).
 
 ### Binding
 

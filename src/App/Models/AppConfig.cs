@@ -60,6 +60,15 @@ public sealed record AppConfig(
     public bool MinimizeOnOpenSession { get; init; }
 
     /// <summary>
+    /// Compte « chef » (Axe 13) : nom du <see cref="GameAccount"/> désigné comme meneur, ou <c>null</c> si aucun.
+    /// <b>Un seul chef à la fois</b> — l'unicité est structurelle (champ unique, pas de drapeau par compte).
+    /// Propriété additive hors constructeur positionnel : absente d'une config → <c>null</c> (schéma inchangé,
+    /// pas de migration — comme <see cref="LauncherPath"/>). Une référence devenue pendante (compte supprimé)
+    /// est effacée par le seul writer (<c>MainViewModel.DeleteAccount</c>).
+    /// </summary>
+    public string? ChefAccountName { get; init; }
+
+    /// <summary>
     /// Version de schéma produite par cette version de l'app. v2 : comptes (v1 = personnages seuls).
     /// v3 : cycle de vie fenêtre (<see cref="CloseMinimizes"/>/<see cref="MinimizeToTray"/>).
     /// </summary>

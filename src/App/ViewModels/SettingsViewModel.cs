@@ -29,6 +29,7 @@ public sealed class SettingsViewModel : ObservableObject
     private readonly Func<string, string?> _addAccount;
     private readonly Action<string> _deleteAccount;
     private readonly Action<string> _deleteCharacter;
+    private readonly Action<string> _toggleChef;
     private readonly Action? _requestShutdown;
     private System.Windows.Threading.DispatcherTimer? _accountErrorTimer;
 
@@ -60,6 +61,7 @@ public sealed class SettingsViewModel : ObservableObject
         Func<string, string?> addAccount,
         Action<string> deleteAccount,
         Action<string> deleteCharacter,
+        Action<string> toggleChef,
         Action? requestShutdown = null)
     {
         _config = config;
@@ -75,6 +77,7 @@ public sealed class SettingsViewModel : ObservableObject
         _addAccount = addAccount;
         _deleteAccount = deleteAccount;
         _deleteCharacter = deleteCharacter;
+        _toggleChef = toggleChef;
         _requestShutdown = requestShutdown;
 
         // [DECISION] État initial lu depuis la config (intention persistée). La réconciliation du registre
@@ -299,7 +302,9 @@ public sealed class SettingsViewModel : ObservableObject
                 .Where(c => c.AccountName is not null && string.Equals(c.AccountName, account.Name, StringComparison.OrdinalIgnoreCase))
                 .Select(c => c.CharacterName)
                 .ToList();
-            GameAccounts.Add(new GameAccountRowViewModel(account.Name, linked, _deleteAccount, _deleteCharacter));
+            var isChef = _config.ChefAccountName is not null
+                && string.Equals(_config.ChefAccountName, account.Name, StringComparison.OrdinalIgnoreCase);
+            GameAccounts.Add(new GameAccountRowViewModel(account.Name, linked, _deleteAccount, _deleteCharacter, isChef, _toggleChef));
         }
         OnPropertyChanged(nameof(HasNoAccounts));
     }

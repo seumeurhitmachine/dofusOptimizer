@@ -12,7 +12,7 @@
 | `switching.md` | Capture & bascule (cœur) | Hooks bas niveau, bascule cyclique/directe, interception conditionnée au focus, conflits, latence < 100 ms | Archivé — Axe 5/6 |
 | `persistence.md` | Persistance config | JSON lisible `%APPDATA%`, autosave débouncé, reprise sur corruption, export/import | Archivé — Axe 2/7 |
 | `tray.md` | Zone de notification & cycle de vie | Vie en tray, suspendre/réactiver l'interception, démarrage Windows optionnel | Archivé — Axe 7 |
-| `comptes-v2.md` | **Évolution** — Comptes ↔ Personnages | Entité Compte (≤40 alphanum.), lien manuel personnage→compte, CRUD comptes, onglet Comptes en 3 zones, migration v1→v2 | **Actif — Axe 8** |
+| `comptes-v2.md` | **Évolution** — Comptes ↔ Personnages | Entité Compte (≤40 alphanum.), lien manuel personnage→compte, CRUD comptes, onglet Comptes en 3 zones, migration v1→v2 | Archivé — Axe 8 |
 
 ## Prochaines étapes (méthodologie)
 

@@ -29,7 +29,8 @@ public sealed class MainViewModel : ObservableObject
         IFileDialogService fileDialog,
         ISessionProcessService? session = null,
         Action? requestShutdown = null,
-        Action? requestMinimize = null)
+        Action? requestMinimize = null,
+        IClipboardService? clipboard = null)
     {
         Config = config;
         // Ouverture de session (Axe 11) : après un « Ouvrir une session » réussi, minimiser l'app SI l'option
@@ -39,8 +40,9 @@ public sealed class MainViewModel : ObservableObject
         // `SetAccountDirectBinding` injecté : le transfert du raccourci direct au lien d'un perso sans compte
         // (Axe 10) écrit côté compte via le seul writer des GameAccounts (MainViewModel).
         Accounts = new AccountsViewModel(config.Accounts, detector, config.GameAccounts, session, requestShutdown,
-            SetAccountDirectBinding, onSessionOpened);
+            SetAccountDirectBinding, onSessionOpened, clipboard);
         Accounts.SetLauncherPath(config.LauncherPath); // chemin de launcher persisté (Axe 9)
+        Accounts.SetChefAccount(config.ChefAccountName); // compte chef persisté (Axe 13)
         // Réordonnancement/exclusion/liaison (Axe 4/8) → maj de la config → autosave débouncé (ref [DT-006]).
         Accounts.AccountsChanged += OnAccountsChanged;
         // Raccourcis (Axe 5/8/10) : suivant/précédent top-level ici, activation directe liée au COMPTE (Axe 8,
@@ -51,7 +53,7 @@ public sealed class MainViewModel : ObservableObject
         // Réglages (Axe 7/8) : suspension + démarrage Windows + export/import + CRUD comptes, remontés ici (seul writer).
         Settings = new SettingsViewModel(config, startup, fileDialog, SetInterceptionSuspended, SetStartWithWindows,
             SetLauncherPath, SetCloseMinimizes, SetMinimizeToTray, SetMinimizeOnOpenSession, ApplyImportedConfig,
-            AddAccount, DeleteAccount, DeleteCharacter, requestShutdown);
+            AddAccount, DeleteAccount, DeleteCharacter, SetChefAccount, requestShutdown);
     }
 
     /// <summary>Titre affiché dans la barre de la fenêtre.</summary>
@@ -150,6 +152,21 @@ public sealed class MainViewModel : ObservableObject
         RaiseConfigChanged();
     }
 
+    /// <summary>
+    /// Désigne (ou retire) le compte <b>chef</b> (Axe 13), par bascule : recliquer la couronne du chef courant
+    /// l'efface. Un seul chef à la fois (champ unique <see cref="AppConfig.ChefAccountName"/>). Pousse l'état au
+    /// VM Comptes (couronne + /invite) ; <see cref="RaiseConfigChanged"/> rafraîchit les lignes des Réglages.
+    /// </summary>
+    private void SetChefAccount(string accountName)
+    {
+        var newChef = Config.ChefAccountName is not null && NameEquals(Config.ChefAccountName, accountName)
+            ? null
+            : accountName;
+        Config = Config with { ChefAccountName = newChef };
+        Accounts.SetChefAccount(newChef);
+        RaiseConfigChanged();
+    }
+
     /// <summary>Bascule la suspension globale de l'interception (RG-T02) — appelée par le tray ou l'onglet Réglages.</summary>
     private void SetInterceptionSuspended(bool suspended)
     {
@@ -207,6 +224,7 @@ public sealed class MainViewModel : ObservableObject
         Accounts.LoadPersisted(imported.Accounts);
         Accounts.LoadGameAccounts(imported.GameAccounts);
         Accounts.SetLauncherPath(imported.LauncherPath);
+        Accounts.SetChefAccount(imported.ChefAccountName);
         RaiseConfigChanged();
     }
 
@@ -241,9 +259,15 @@ public sealed class MainViewModel : ObservableObject
             .Where(c => c.AccountName is null || !NameEquals(c.AccountName, name))
             .ToList();
 
-        Config = Config with { GameAccounts = accounts, Accounts = characters };
+        // Chef (Axe 13) : si le compte supprimé était chef, effacer la référence devenue pendante.
+        var chef = Config.ChefAccountName is not null && NameEquals(Config.ChefAccountName, name)
+            ? null
+            : Config.ChefAccountName;
+
+        Config = Config with { GameAccounts = accounts, Accounts = characters, ChefAccountName = chef };
         Accounts.LoadPersisted(Config.Accounts);
         Accounts.LoadGameAccounts(Config.GameAccounts);
+        Accounts.SetChefAccount(chef);
         RaiseConfigChanged();
     }
 

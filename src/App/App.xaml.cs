@@ -74,6 +74,7 @@ public partial class App : Application
         _windowDetector = new WindowDetector();
         IStartupRegistryService startup = new StartupRegistryService();
         IFileDialogService fileDialog = new FileDialogService();
+        IClipboardService clipboard = new ClipboardService();
         // Cycle de session (Axe 9) : lancement du launcher / fermeture des clients (exception C-02, [DT-027]).
         ISessionProcessService session = new SessionProcessService();
 
@@ -96,7 +97,7 @@ public partial class App : Application
         // invoqué plus tard (après un clic « Ouvrir une session »), donc capturer _window en closure suffit.
         Action requestMinimize = () => _window?.MinimizeApp();
         var mainViewModel = new MainViewModel(config, _windowDetector, inputCapture, startup, fileDialog,
-            session, requestShutdown, requestMinimize);
+            session, requestShutdown, requestMinimize, clipboard);
         mainViewModel.ConfigChanged += _autosave.Notify;
 
         // 4. Interception & bascule de focus (Axe 6) : décision pure → activation → coordinateur.

@@ -27,8 +27,10 @@ public sealed class AccountsViewModel : ObservableObject
     private readonly Action? _requestShutdown;
     private readonly Action? _onSessionOpened;
     private readonly Action<string, Binding?>? _applyAccountDirectBinding;
+    private readonly IClipboardService? _clipboard;
     private List<AccountConfig> _persisted;
     private List<GameAccount> _gameAccounts;
+    private string? _chefAccountName;
     private AccountItemViewModel? _selectedItem;
     private bool _hasConnectedClients;
     private bool _showOpenSession;
@@ -49,7 +51,8 @@ public sealed class AccountsViewModel : ObservableObject
         ISessionProcessService? session = null,
         Action? requestShutdown = null,
         Action<string, Binding?>? applyAccountDirectBinding = null,
-        Action? onSessionOpened = null)
+        Action? onSessionOpened = null,
+        IClipboardService? clipboard = null)
     {
         _persisted = [.. persisted];
         _gameAccounts = [.. gameAccounts ?? []];
@@ -57,6 +60,7 @@ public sealed class AccountsViewModel : ObservableObject
         _requestShutdown = requestShutdown;
         _onSessionOpened = onSessionOpened;
         _applyAccountDirectBinding = applyAccountDirectBinding;
+        _clipboard = clipboard;
         MoveUpCommand = new RelayCommand(() => MoveSelected(-1), () => CanMoveSelected(-1));
         MoveDownCommand = new RelayCommand(() => MoveSelected(+1), () => CanMoveSelected(+1));
         ToggleExcludeCommand = new RelayCommand(ToggleExcludeSelected, () => SelectedItem is not null);
@@ -417,6 +421,9 @@ public sealed class AccountsViewModel : ObservableObject
         // Axe 11) mêlées, chacune de plein droit dans la rotation ([DT-029]/[DT-030]).
         var accountByChar = zones.Connected.ToDictionary(z => z.ConnectedCharacter, z => z.AccountName, StringComparer.Ordinal);
         var unlinked = new HashSet<string>(zones.UnlinkedConnected, StringComparer.Ordinal);
+        // Chef (Axe 13) : la couronne marque le personnage du compte chef connecté ; le bouton /invite n'est
+        // proposé que s'il reste au moins un autre personnage connecté (non anonyme) à inviter.
+        var otherConnectedCharacters = accountByChar.Count + unlinked.Count - 1;
         ConnectedRows.Clear();
         var anonymousNumber = 0;
         foreach (var item in Items)
@@ -424,7 +431,11 @@ public sealed class AccountsViewModel : ObservableObject
             if (!item.HasCharacter)
                 ConnectedRows.Add(new ConnectedRowViewModel(item, $"Dofus {++anonymousNumber}"));
             else if (accountByChar.TryGetValue(item.CharacterName, out var accountName))
-                ConnectedRows.Add(new ConnectedRowViewModel(accountName, item));
+            {
+                var isChef = _chefAccountName is not null && NameEquals(accountName, _chefAccountName);
+                ConnectedRows.Add(new ConnectedRowViewModel(
+                    accountName, item, isChef, isChef && otherConnectedCharacters >= 1, CopyChefInvite));
+            }
             else if (unlinked.Contains(item.CharacterName))
                 ConnectedRows.Add(new ConnectedRowViewModel(item, AvailableAccounts, LinkCharacter));
         }
@@ -522,6 +533,31 @@ public sealed class AccountsViewModel : ObservableObject
     {
         _gameAccounts = [.. gameAccounts];
         RebuildZones();
+    }
+
+    /// <summary>
+    /// Définit le compte chef affiché (Axe 13) — <c>null</c> si aucun. Pousse l'information aux lignes
+    /// connectées (couronne + bouton /invite). Le writer (MainViewModel) a déjà persisté la config.
+    /// </summary>
+    public void SetChefAccount(string? accountName)
+    {
+        _chefAccountName = accountName;
+        RebuildZones();
+    }
+
+    /// <summary>
+    /// Copie dans le presse-papier la formule <c>/invite &lt;perso&gt;</c> de tous les personnages connectés
+    /// <b>sauf le chef</b> (Axe 13), séparés par « ; ». Les clients sans personnage (anonymes) sont ignorés.
+    /// No-op si le chef n'est pas connecté (le bouton n'est alors pas affiché).
+    /// </summary>
+    private void CopyChefInvite()
+    {
+        var chefRow = ConnectedRows.FirstOrDefault(r => r.IsChef);
+        if (chefRow is null) return;
+        var others = ConnectedRows
+            .Where(r => !r.IsAnonymous && !ReferenceEquals(r, chefRow))
+            .Select(r => $"/invite {r.Character.CharacterName}");
+        _clipboard?.SetText(string.Join("; ", others));
     }
 
     /// <summary>

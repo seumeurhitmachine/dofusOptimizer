@@ -12,21 +12,31 @@ public sealed class GameAccountRowViewModel : ObservableObject
 {
     private bool _isExpanded;
 
-    /// <summary>Câble la ligne sur le nom, ses personnages liés et les rappels de suppression.</summary>
+    /// <summary>Câble la ligne sur le nom, ses personnages liés et les rappels de suppression / désignation du chef.</summary>
     public GameAccountRowViewModel(
         string name,
         IReadOnlyList<string> linkedCharacters,
         Action<string> deleteAccount,
-        Action<string> deleteCharacter)
+        Action<string> deleteCharacter,
+        bool isChef,
+        Action<string> toggleChef)
     {
         Name = name;
+        IsChef = isChef;
         LinkedCharacters = [.. linkedCharacters.Select(c => new LinkedCharacterViewModel(c, deleteCharacter))];
         DeleteCommand = new RelayCommand(() => deleteAccount(name));
         ToggleExpandCommand = new RelayCommand(() => IsExpanded = !IsExpanded);
+        ToggleChefCommand = new RelayCommand(() => toggleChef(name));
     }
 
     /// <summary>Nom du compte (non modifiable).</summary>
     public string Name { get; }
+
+    /// <summary>Vrai si ce compte est le chef (Axe 13) : pilote le rendu de la couronne (accent vs atténuée).</summary>
+    public bool IsChef { get; }
+
+    /// <summary>Désigne/retire ce compte comme chef (couronne cliquable, Axe 13). Un seul chef à la fois (géré par le writer).</summary>
+    public RelayCommand ToggleChefCommand { get; }
 
     /// <summary>Personnages liés à ce compte (affichés une fois déplié).</summary>
     public ObservableCollection<LinkedCharacterViewModel> LinkedCharacters { get; }

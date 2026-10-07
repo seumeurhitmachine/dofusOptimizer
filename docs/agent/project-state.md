@@ -4,11 +4,11 @@
 
 > Mettre à jour à chaque /finalise. Max 30 lignes.
 
-**Dernier Axe complété :** Packaging & auto-update (Velopack) — évolution sans `/axe` formel — 2026-09-26
-**Phase :** **Phase 6 — Évolution**. v1.0.0→v1.3.0 livrées (tags sans préfixe `v`, ex. `1.3.0`). **v1.4.0 préparée**
-(packaging Velopack : `App.csproj` 1.4.0 + CHANGELOG + README) sur la branche `axe-12-packaging-velopack` —
-**reste à merger sur `main` + créer/pousser le tag `1.4.0`** (déclenche la CI de release). Dépôt sur GitHub (`origin`).
-Pas d'Axe planifié au-delà (plan-axes = Axes 1→7 ; Axes 8-11 + packaging = évolutions cadrées hors plan).
+**Dernier Axe complété :** Axe 13 — Compte chef + copie /invite — v1.5.0 (préparée) — 2026-10-07
+**Phase :** **Phase 6 — Évolution**. v1.0.0→v1.4.1 livrées et taguées (tags sans préfixe `v`, ex. `1.4.1`).
+**v1.5.0 préparée** (Axe 13 compte chef : `App.csproj` 1.5.0) sur la branche `axe-13-compte-chef` (poussée) —
+**reste à merger sur `main` + créer/pousser le tag `1.5.0`** (déclenche la CI de release). Dépôt sur GitHub (`origin`).
+Pas d'Axe formel au-delà (plan-axes = Axes 1→7 ; Axes 8-13 = évolutions cadrées hors plan).
 **Post-v1.0.0 (hors Axe, mergé sur `main`) :** application renommée **« Dofus Optimizer »** ;
 polish UI onglet Comptes, onglets pleine largeur, icône poubelle Raccourcis.
 ⚠️ Terminologie : `AccountConfig` (code) = **personnage** (clé = nom de fenêtre) ; l'entité **compte**
@@ -112,6 +112,15 @@ est `GameAccount` (nom historique conservé pour la compat JSON `accounts`, ref 
   = self-contained **sans single-file** (`-p:VelopackPack=true`, delta updates). Outillage : `.config/dotnet-tools.json`
   (`vpk`), `scripts/release.ps1`, `.github/workflows/release.yml` (publie sur tag SemVer). Doc : `docs/packaging.md`.
   ⚠️ Suivis : SmartScreen (pas de cert) ; « démarrer avec Windows » vs dossier versionné Velopack (à valider recette).
+
+- **Compte chef (Axe 13, v1.5.0)** : un `GameAccount` peut être désigné **chef** (`AppConfig.ChefAccountName`,
+  nullable, **un seul** — unicité structurelle par champ unique ; additif, **sans bump schemaVersion**). Couronne
+  **cliquable** à gauche du nom dans Réglages (accent si chef, atténuée sinon, bascule) ; couronne **indicateur**
+  à droite du personnage connecté du chef dans Comptes ; bouton « personne + » (à gauche de la croix, ligne chef)
+  qui **copie dans le presse-papier** `"/invite <perso>; …"` de tous les personnages connectés **sauf le chef**
+  (clients anonymes exclus), affiché seulement s'il reste au moins un autre connecté. Presse-papier via abstraction
+  `IClipboardService`/`ClipboardService` (VM sans WPF, [DT-014]). Désignation en toggle via seul writer
+  `MainViewModel.SetChefAccount` ; référence effacée à la suppression du compte. [DT-032]
 
 **Contraintes techniques actives :**
 - .NET 10 + WPF, MVVM manuel, **zéro NuGet** dans l'app **sauf Velopack** (packaging/auto-update, [DECISION]
@@ -229,6 +238,12 @@ est `GameAccount` (nom historique conservé pour la compat JSON `accounts`, ref 
   lancé sans client → activation de sa fenêtre (`TryActivateLauncher`, exception C-02 [DT-027], `MainWindowHandle`
   du launcher, jamais le jeu). Champ `MinimizeOnOpenSession` additif (défaut false) **sans bump schemaVersion**
   (comme `LauncherPath`). Coins arrondis = attribut d'affichage DWM sur notre fenêtre (aucun lien C-02/C-03).
+- [DT-032] (Axe 13) **Compte chef = champ unique additif** : `AppConfig.ChefAccountName` (nullable) porte
+  l'unicité du chef **structurellement** (pas de drapeau par `GameAccount`) ; additif, défaut `null`, **sans bump
+  schemaVersion** (comme `LauncherPath`/`MinimizeOnOpenSession`). Désignation en **toggle** (seul writer
+  `MainViewModel.SetChefAccount`) ; référence pendante **effacée** à la suppression du compte. Copie `/invite`
+  via `IClipboardService` (abstraction WPF, [DT-014]) — texte local seul, aucune interaction process/jeu
+  (C-02/C-03 intacts). Bouton d'invite masqué s'il ne reste aucun autre personnage connecté (anonymes exclus).
 - [DT-031] (Packaging) **Velopack = seule dépendance NuGet runtime tolérée**, exception explicite à la
   contrainte « zéro NuGet » (autorisée 2026-09-26). Justification : installateur + auto-update impossibles
   sans lib dédiée. Contreparties : `VelopackApp.Build().Run()` en tête d'`OnStartup` ; publish Velopack
@@ -245,6 +260,35 @@ est `GameAccount` (nom historique conservé pour la compat JSON `accounts`, ref 
 ## Historique des Axes
 
 <!-- Une entrée par Axe complété. Ajoutée par /finalise. -->
+
+### Axe 13 — Compte chef + copie /invite (évolution, 2026-10-07)
+
+**Périmètre livré :** un compte (`GameAccount`) peut être désigné **chef** (un seul à la fois). Couronne
+cliquable à gauche du nom dans Réglages (accent si chef, atténuée sinon, bascule) ; couronne indicateur à droite
+du personnage connecté du chef dans Comptes ; bouton « personne + » (à gauche de la croix, ligne chef) copiant
+`"/invite <perso>; …"` de tous les personnages connectés sauf le chef (clients anonymes exclus), affiché seulement
+s'il reste au moins un autre connecté. Version applicative **1.5.0**.
+
+**Changements structurants :** `AppConfig.ChefAccountName` (additif, **sans bump schemaVersion**) ; nouveau
+`IClipboardService` (Services/) + `ClipboardService` (Views/) ; `MainViewModel.SetChefAccount` (toggle, seul
+writer) + effacement à `DeleteAccount` + propagation à `ApplyImportedConfig` ; `AccountsViewModel`
+(`SetChefAccount`, `CopyChefInvite`, `canInvite` au `RebuildZones`, param `IClipboardService`) ;
+`ConnectedRowViewModel` (ctor lié gagne `isChef`/`canInvite`/`copyInvite` ; props `IsChef`/`CanInvite`/`ShowInvite`/
+`CopyInviteCommand`) ; `GameAccountRowViewModel` (`IsChef` + `ToggleChefCommand`) ; `SettingsViewModel` (callback
+`toggleChef` + `isChef` au `RebuildAccountRows`) ; `AccountsView.xaml` (couronne indicateur + bouton `/invite`,
+géométries `CrownGeometry`/`PersonPlusGeometry`) ; `ReglagesView.xaml` (couronne cliquable, `CrownGeometry`) ;
+`App.xaml.cs` (câblage `ClipboardService`) ; `App.csproj` Version 1.5.0.
+
+**Décisions :** [DT-032] compte chef = champ unique additif (unicité structurelle, toggle, réf effacée à la
+suppression ; copie `/invite` via `IClipboardService`, texte local seul, C-02/C-03 intacts).
+
+**Vérifications :** `dotnet build` Debug + Release **0/0** ; `dotnet test` **183/183** (Debug + Release ; +10 :
+unicité/toggle chef, re-clic efface, suppression chef efface la réf / suppression d'un autre préserve, round-trip
+`ChefAccountName` sans bump + absence→null, couronne sur la bonne ligne, chef seul / chef+anonyme → pas d'invite,
+formule `/invite` ordonnée chef exclu). `docs/data-model.md` mis à jour (`chefAccountName`).
+
+**Dette technique assumée :** rendu réel non testable unitairement → recette : apparence des couronnes (cliquable
+Réglages / indicateur Comptes), icône « personne + », copie réelle dans le presse-papier Windows.
 
 ### Packaging & auto-update (Velopack) — évolution, 2026-09-26
 

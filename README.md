@@ -5,7 +5,7 @@ pour faciliter le multi-compte.
 Finis les ALT+TAB, pilote tes clients Dofus avec des raccourcis personnalisés 
 et optimise ton exppérience de jeu.
 
-**Version courante : 1.4.1** — 2026-10-06
+**Version courante : 1.5.1** — 2026-10-07
 
 
 ## Fonctionnalités
@@ -25,6 +25,9 @@ Enregistre manuellement les personnages par compte pour conserver tes raccourcis
 2 types de raccourcis :<br>
 Raccourcis de rotation pour accéder au prochain compte dans l'ordre déterminé<br>
 Raccourcis directs pour accéder au compte voulu
+
+Désigne un compte chef du groupe d'un clic sur la couronne dans les Réglages<br>
+Depuis l'onglet Comptes, copie en un clic la commande `/invite` de tous les autres personnages connectés
 
 ## Installation
 

@@ -5,6 +5,26 @@ Toutes les évolutions notables de Dofus Optimizer sont consignées dans ce fich
 Le format s'appuie sur [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/),
 et le projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 
+## [1.5.1] - 2026-10-07
+
+Désignation d'un compte chef et copie en un clic des invitations de groupe.
+
+### Added
+
+- **Compte chef** : un clic sur la **couronne** d'un compte dans les Réglages le
+  désigne comme chef du groupe (un seul à la fois ; recliquer le retire). Le choix
+  est persisté entre deux lancements.
+- **Copie des `/invite`** : dans l'onglet Comptes, le personnage du compte chef
+  connecté affiche une couronne et un bouton qui **copie dans le presse-papier la
+  commande `/invite` de tous les autres personnages connectés** (`/invite A; /invite B; …`),
+  prête à coller dans le jeu. Un retour visuel **« Copié ! »** confirme l'action
+  puis s'efface de lui-même.
+
+### Note
+
+- Aucune interaction avec le jeu : la copie se limite au presse-papier système.
+- Aucune migration : les configurations existantes sont reprises telles quelles.
+
 ## [1.4.1] - 2026-10-06
 
 Correctif de stabilité.
